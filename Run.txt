@@ -1,0 +1,44 @@
+SOUNDWAVE - THREE MACHINES
+=============================
+
+Each machine has its own folder and own start command.
+
+├── Soundwave/
+│   ├── Admin/          ← MACHINE 1: Admin Portal
+│   ├── Editor/         ← MACHINE 2: Editor Web App
+│   ├── PublicUser/     ← MACHINE 3: Public User Portal
+│   └── src/            ← Shared Expo app source code
+
+
+MACHINE 1 - ADMIN PORTAL
+--------------------------
+Folder: Soundwave\Admin\
+Start:  Double-click start.bat
+        Or: cd Soundwave\Admin ^ start.bat
+Opens:  http://localhost:8081/(admin)
+Note:   Launches Expo dev server + opens browser to admin dashboard
+
+
+MACHINE 2 - EDITOR WEB APP
+--------------------------
+Folder: Soundwave\Editor\
+Start:  Double-click start.bat
+        Or: cd Soundwave\Editor ^ node server.js
+Opens:  http://localhost:8080
+Note:   Standalone Node.js web server (MongoDB backend)
+
+
+MACHINE 3 - PUBLIC USER PORTAL
+--------------------------
+Folder: Soundwave\PublicUser\
+Start:  Double-click start.bat
+        Or: cd Soundwave\PublicUser ^ start.bat
+Opens:  http://localhost:8082/
+Note:   Standalone Node.js static server (like Editor).
+        Login and Sign Up combined in a single screen with toggle.
+        No npm/npx at runtime — pure node server.js.
+
+QUICK LAUNCHER
+-------------------------
+Double-click: start.bat  (at Finals\ root)
+Menu: [1] Admin  [2] Editor  [3] Public User  [4] All  [5] Exit
