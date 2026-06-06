@@ -31,6 +31,7 @@ export default function UserLayout() {
   const pathname = usePathname();
   const { role, loading, signOut } = useAuth();
   const [checking, setChecking] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
   const insets = useSafeAreaInsets();
 
   // Determine if we're on an auth screen (full-screen, no chrome)
@@ -52,6 +53,16 @@ export default function UserLayout() {
     }
   }, [loading, role]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading || checking) {
+        setTimedOut(true);
+        setChecking(false);
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleLogout = async () => {
     await signOut();
     if (typeof window !== 'undefined') {
@@ -60,6 +71,22 @@ export default function UserLayout() {
       router.replace('/');
     }
   };
+
+  if (timedOut) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ color: '#94A3B8', fontSize: 16, marginBottom: 16, textAlign: 'center', paddingHorizontal: 32 }}>
+          Unable to connect to authentication service. Check your internet connection and try again.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: '#38BDF8', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 6 }}
+          onPress={() => { setTimedOut(false); setChecking(true); window.location.reload(); }}
+        >
+          <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 15 }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading || checking) {
     return (

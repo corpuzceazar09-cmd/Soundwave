@@ -1,101 +1,190 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const FEATURED_PODCASTS = [
-  { id: 1, title: 'The Tech Daily', host: 'Sarah Chen', episodes: 142, category: 'Technology', color: '#DBEAFE' },
-  { id: 2, title: 'Global Markets Weekly', host: 'James Rivera', episodes: 89, category: 'Finance', color: '#FEF3C7' },
-  { id: 3, title: 'Crime Chronicles', host: 'Maya Thompson', episodes: 56, category: 'True Crime', color: '#FEE2E2' },
-  { id: 4, title: 'Science Now', host: 'Dr. Alan Park', episodes: 12, category: 'Science', color: '#D1FAE5' },
-  { id: 5, title: 'History Revisited', host: 'Emma Wright', episodes: 78, category: 'History', color: '#E0E7FF' },
-  { id: 6, title: 'Mindful Living', host: 'Liam Foster', episodes: 34, category: 'Wellness', color: '#FCE7F3' },
+const TRENDING = [
+  { title: 'Crime Junkie', color: '#1E293B', icon: 'flame' },
+  { title: 'The Daily', color: '#1E3A5F', icon: 'newspaper' },
+  { title: 'SmartLess', color: '#3B1F2E', icon: 'chatbubbles' },
+  { title: 'Huberman Lab', color: '#1F3B2E', icon: 'fitness' },
 ];
 
-const RECENT_EPISODES = [
-  { id: 1, podcast: 'The Tech Daily', title: 'AI in 2025: What\'s Real and What\'s Hype', duration: '42 min', date: 'Oct 24' },
-  { id: 2, podcast: 'Crime Chronicles', title: 'The Cold Case That Shook a City', duration: '58 min', date: 'Oct 23' },
-  { id: 3, podcast: 'Science Now', title: 'Deep Sea Discoveries: New Species Found', duration: '35 min', date: 'Oct 22' },
+const CATEGORIES = [
+  { label: 'True Crime', color: '#DC2626' },
+  { label: 'Science', color: '#2563EB' },
+  { label: 'Comedy', color: '#D97706' },
+  { label: 'Technology', color: '#059669' },
+  { label: 'Business', color: '#7C3AED' },
+  { label: 'Health', color: '#DB2777' },
 ];
 
-export default function UserDashboard() {
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Welcome Section */}
-      <View style={styles.welcomeCard}>
-        <Text style={styles.welcomeTitle}>Welcome back 👋</Text>
-        <Text style={styles.welcomeSubtitle}>
-          Discover new podcasts or continue listening to your favorites.
+export default function UserHomeScreen() {
+  const renderFeaturedBanner = () => (
+    <LinearGradient
+      colors={['#1E293B', '#0F172A']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.featuredCard}
+    >
+      <View style={styles.featuredContent}>
+        <View style={styles.featuredBadge}>
+          <Ionicons name="sparkles" size={12} color="#FBBF24" />
+          <Text style={styles.featuredBadgeText}>FEATURED</Text>
+        </View>
+        <Text style={styles.featuredTitle}>THE DAILY DRIVE</Text>
+        <Text style={styles.featuredHost}>with John Smith</Text>
+        <Text style={styles.featuredDesc}>
+          Navigating tomorrow's tech landscape — one conversation at a time.
         </Text>
+        <TouchableOpacity style={styles.listenButton}>
+          <Ionicons name="play" size={18} color="#0F172A" />
+          <Text style={styles.listenButtonText}>Listen Now</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Featured Podcasts */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Podcasts</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAllText}>View All →</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.podcastGrid}>
-          {FEATURED_PODCASTS.map((p) => (
-            <TouchableOpacity key={p.id} style={styles.podcastCard}>
-              <View style={[styles.podcastCover, { backgroundColor: p.color }]}>
-                <Text style={styles.podcastCoverIcon}>🎙️</Text>
-              </View>
-              <Text style={styles.podcastTitle} numberOfLines={1}>{p.title}</Text>
-              <Text style={styles.podcastHost}>{p.host}</Text>
-              <View style={styles.podcastMeta}>
-                <Text style={styles.podcastEpisodes}>{p.episodes} episodes</Text>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{p.category}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <View style={styles.featuredGraphic}>
+        <Ionicons name="mic-circle" size={120} color="rgba(56, 189, 248, 0.15)" />
       </View>
+    </LinearGradient>
+  );
 
-      {/* Recent Episodes */}
-      <View style={styles.tableSection}>
-        <View style={styles.tableHeader}>
-          <Text style={styles.sectionTitle}>Recently Added Episodes</Text>
-        </View>
-        {RECENT_EPISODES.map((ep) => (
-          <TouchableOpacity key={ep.id} style={styles.episodeRow}>
-            <View style={styles.episodePlay}>
-              <Text style={{ fontSize: 18 }}>▶</Text>
+  const renderTrendingRow = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Trending Now</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAllText}>See All</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingRow}>
+        {TRENDING.map((item) => (
+          <TouchableOpacity key={item.title} style={styles.trendingCard}>
+            <View style={[styles.trendingIconBg, { backgroundColor: item.color }]}>
+              <Ionicons name={item.icon as any} size={28} color="#FFFFFF" />
             </View>
-            <View style={styles.episodeInfo}>
-              <Text style={styles.episodeTitle}>{ep.title}</Text>
-              <Text style={styles.episodePodcast}>{ep.podcast}</Text>
-            </View>
-            <Text style={styles.episodeDuration}>{ep.duration}</Text>
-            <Text style={styles.episodeDate}>{ep.date}</Text>
+            <Text style={styles.trendingTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.trendingEpisodes}>24 episodes</Text>
           </TouchableOpacity>
         ))}
+      </ScrollView>
+    </View>
+  );
+
+  const renderCategories = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Top Categories</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAllText}>Browse All</Text>
+        </TouchableOpacity>
       </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
+        {CATEGORIES.map((cat) => (
+          <TouchableOpacity key={cat.label} style={styles.categoryCard}>
+            <View style={[styles.categoryAccent, { backgroundColor: cat.color }]} />
+            <Text style={styles.categoryLabel}>{cat.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {renderFeaturedBanner()}
+      {renderTrendingRow()}
+      {renderCategories()}
+      <View style={{ height: 24 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { gap: 24 },
-  welcomeCard: {
-    backgroundColor: '#047857',
-    borderRadius: 12,
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 24,
+    gap: 32,
+  },
+  // Featured Banner
+  featuredCard: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    overflow: 'hidden',
     padding: 32,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  welcomeTitle: {
-    fontSize: 24,
+  featuredContent: {
+    flex: 1,
+    maxWidth: '60%',
+  },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
+  featuredBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
+    color: '#FBBF24',
+    letterSpacing: 0.5,
+  },
+  featuredTitle: {
+    fontSize: 28,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 8,
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: '#A7F3D0',
-    lineHeight: 22,
+  featuredHost: {
+    fontSize: 16,
+    color: '#94A3B8',
+    marginBottom: 12,
   },
+  featuredDesc: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  listenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#38BDF8',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  listenButtonText: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  featuredGraphic: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Trending Section
   section: {},
   sectionHeader: {
     flexDirection: 'row',
@@ -104,119 +193,74 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
   },
-  viewAllText: {
+  seeAllText: {
     fontSize: 13,
+    color: '#38BDF8',
     fontWeight: '600',
-    color: '#059669',
   },
-  podcastGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  trendingRow: {
     gap: 16,
+    paddingRight: 24,
   },
-  podcastCard: {
-    width: 180,
+  trendingCard: {
+    width: 140,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
   },
-  podcastCover: {
-    height: 100,
+  trendingIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  podcastCoverIcon: {
-    fontSize: 36,
-  },
-  podcastTitle: {
+  trendingTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
-    paddingHorizontal: 12,
-    paddingTop: 12,
+    color: '#0F172A',
+    marginBottom: 4,
   },
-  podcastHost: {
-    fontSize: 12,
-    color: '#6B7280',
-    paddingHorizontal: 12,
-    marginTop: 4,
+  trendingEpisodes: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
-  podcastMeta: {
+  // Categories
+  categoriesRow: {
+    gap: 12,
+    paddingRight: 24,
+  },
+  categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  podcastEpisodes: {
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
-  categoryBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  categoryAccent: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
   },
-  categoryText: {
-    fontSize: 10,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  tableSection: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-  },
-  tableHeader: {
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  episodeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  episodePlay: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#D1FAE5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  episodeInfo: {
-    flex: 1,
-  },
-  episodeTitle: {
+  categoryLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
-  },
-  episodePodcast: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  episodeDuration: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginRight: 24,
-  },
-  episodeDate: {
-    fontSize: 13,
-    color: '#9CA3AF',
+    fontWeight: '600',
+    color: '#0F172A',
   },
 });

@@ -7,6 +7,17 @@ export default function EditorLayout() {
   const router = useRouter();
   const { role, loading, signOut } = useAuth();
   const [checking, setChecking] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading || checking) {
+        setTimedOut(true);
+        setChecking(false);
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -31,6 +42,22 @@ export default function EditorLayout() {
       router.replace('/');
     }
   };
+
+  if (timedOut) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ color: '#64748B', fontSize: 16, marginBottom: 16, textAlign: 'center', paddingHorizontal: 32 }}>
+          Unable to connect to authentication service. Check your internet connection and try again.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 6 }}
+          onPress={() => { setTimedOut(false); setChecking(true); window.location.reload(); }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading || checking) {
     return (
