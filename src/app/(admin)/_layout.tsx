@@ -1,23 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Slot, useRouter } from 'expo-router';
+import { Slot, useRouter, usePathname } from 'expo-router';
 import { useAuth, isMockMode } from '@/lib/auth';
+
+type NavItem = {
+  label: string;
+  route: string;
+  icon: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', route: '/(admin)', icon: 'D' },
+  { label: 'RSS Feeds', route: '/(admin)/feeds', icon: 'F' },
+  { label: 'Ingestion Logs', route: '/(admin)/ingestion-logs', icon: 'L' },
+  { label: 'Raw Data', route: '/(admin)/raw-data', icon: 'R' },
+  { label: 'Failed Jobs', route: '/(admin)/failed-jobs', icon: '!' },
+];
 
 export default function AdminLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { role, loading, signOut } = useAuth();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     if (loading) return;
 
-    // In mock mode, allow access if role was set (via login redirect)
     if (isMockMode()) {
       setChecking(false);
       return;
     }
 
-    // Real mode: enforce Admin role
     if (role !== 'Admin') {
       router.replace('/');
     } else {
@@ -32,6 +45,15 @@ export default function AdminLayout() {
     } else {
       router.replace('/');
     }
+  };
+
+  const navigate = (route: string) => {
+    router.push(route as any);
+  };
+
+  const isActive = (route: string) => {
+    if (route === '/(admin)') return pathname === '/(admin)' || pathname === '/';
+    return pathname.startsWith(route);
   };
 
   if (loading || checking) {
@@ -51,35 +73,33 @@ export default function AdminLayout() {
           <Text style={styles.brandVersion}>v2.4.0</Text>
         </View>
 
-        <TouchableOpacity style={styles.newJobButton}>
+        <TouchableOpacity
+          style={styles.newJobButton}
+          onPress={() => navigate('/(admin)/feeds')}
+        >
           <Text style={styles.newJobButtonText}>+ New Ingestion Job</Text>
         </TouchableOpacity>
 
         <View style={styles.navGroup}>
-          <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-            <Text style={[styles.navItemText, styles.navItemTextActive]}>Dashboard</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>RSS Feeds</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Ingestion Logs</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Raw Data</Text>
-          </TouchableOpacity>
+          {NAV_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.route}
+              style={[styles.navItem, isActive(item.route) && styles.navItemActive]}
+              onPress={() => navigate(item.route)}
+            >
+              <View style={[styles.navIcon, isActive(item.route) && styles.navIconActive]}>
+                <Text style={[styles.navIconText, isActive(item.route) && styles.navIconTextActive]}>
+                  {item.icon}
+                </Text>
+              </View>
+              <Text style={[styles.navItemText, isActive(item.route) && styles.navItemTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.spacer} />
-
-        <View style={styles.footerNavGroup}>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Settings</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Support</Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.profileSection}>
           <View style={styles.avatarPlaceholder} />
@@ -166,6 +186,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -179,6 +202,25 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 6,
     borderBottomRightRadius: 6,
   },
+  navIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navIconActive: {
+    backgroundColor: '#DBEAFE',
+  },
+  navIconText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  navIconTextActive: {
+    color: '#2563EB',
+  },
   navItemText: {
     fontSize: 14,
     color: '#475569',
@@ -191,18 +233,15 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-  footerNavGroup: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingTop: 16,
-  },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    marginHorizontal: 12,
+    paddingBottom: 8,
   },
   avatarPlaceholder: {
     width: 36,

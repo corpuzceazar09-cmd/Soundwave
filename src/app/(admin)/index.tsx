@@ -1,485 +1,229 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+
+type DashboardStats = {
+  totalPodcasts: number;
+  totalEpisodes: number;
+  failedJobs: number;
+  activeFeeds: number;
+  pendingFeeds: number;
+};
 
 export default function DashboardScreen() {
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPodcasts: 0, totalEpisodes: 0, failedJobs: 0, activeFeeds: 0, pendingFeeds: 0,
+  });
+  const [recentJobs, setRecentJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const [podcastsRes, episodesRes, feedsRes, jobsRes] = await Promise.all([
+        supabase.from('podcasts').select('id', { count: 'exact', head: true }),
+        supabase.from('episodes').select('id', { count: 'exact', head: true }),
+        supabase.from('feeds').select('status'),
+        supabase.from('ingestion_jobs').select('*').order('started_at', { ascending: false }).limit(10),
+      ]);
+
+      const totalPodcasts = podcastsRes.count || 0;
+      const totalEpisodes = episodesRes.count || 0;
+      const allFeeds = feedsRes.data || [];
+      const failedJobsFeed = allFeeds.filter(f => f.status === 'failed').length;
+      
+      setStats({
+        totalPodcasts,
+        totalEpisodes,
+        failedJobs: failedJobsFeed,
+        activeFeeds: allFeeds.filter(f => f.status === 'active').length,
+        pendingFeeds: allFeeds.filter(f => f.status === 'pending').length,
+      });
+      setRecentJobs(jobsRes.data || []);
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'success': return { bg: '#D1FAE5', text: '#059669', label: 'SUCCESS' };
+      case 'error': return { bg: '#FEE2E2', text: '#DC2626', label: 'ERROR' };
+      case 'running': return { bg: '#DBEAFE', text: '#2563EB', label: 'RUNNING' };
+      default: return { bg: '#F3F4F6', text: '#6B7280', label: status.toUpperCase() };
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Top Stats Cards */}
+      {/* Stats Cards */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <Text style={styles.statTitle}>TOTAL PODCASTS</Text>
-          <Text style={styles.statValue}>12,402</Text>
-          <Text style={styles.statChange}>↑ +4.2% from last month</Text>
+          <Text style={styles.statValue}>{stats.totalPodcasts}</Text>
+          <Text style={[styles.statSubtext, { color: '#64748B' }]}>Across all feeds</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statTitle}>TOTAL EPISODES</Text>
-          <Text style={styles.statValue}>450,210</Text>
-          <Text style={styles.statSubtitle}>Archived and active</Text>
+          <Text style={styles.statValue}>{stats.totalEpisodes}</Text>
+          <Text style={[styles.statSubtext, { color: '#64748B' }]}>Archived and active</Text>
         </View>
-        <View style={[styles.statCard, styles.statCardError]}>
-          <Text style={[styles.statTitle, styles.textError]}>FAILED JOBS</Text>
-          <Text style={[styles.statValue, styles.textError]}>14</Text>
-          <Text style={[styles.statSubtitle, styles.textErrorUnderline]}>Requires attention</Text>
+        <View style={[styles.statCard, stats.failedJobs > 0 && styles.statCardError]}>
+          <Text style={[styles.statTitle, stats.failedJobs > 0 && { color: '#DC2626' }]}>FAILED JOBS</Text>
+          <Text style={[styles.statValue, stats.failedJobs > 0 && { color: '#DC2626' }]}>{stats.failedJobs}</Text>
+          <TouchableOpacity onPress={() => router.push('/(admin)/failed-jobs' as any)}>
+            <Text style={[styles.statSubtext, { color: '#DC2626', textDecorationLine: 'underline' }]}>
+              Requires attention →
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.statCard}>
-          <View style={styles.syncStatusHeader}>
-            <Text style={styles.statTitle}>SYNC STATUS</Text>
-            <View style={styles.dotGreen} />
-          </View>
-          <Text style={styles.statValue}>98.2%</Text>
-          <Text style={styles.statSuccess}>HEALTHY</Text>
+          <Text style={styles.statTitle}>FEEDS</Text>
+          <Text style={styles.statValue}>{stats.activeFeeds}</Text>
+          <Text style={{ fontSize: 12, color: '#64748B' }}>
+            Active · {stats.pendingFeeds} pending
+          </Text>
         </View>
       </View>
 
-      <View style={styles.mainRow}>
-        {/* System Health Graph Mock */}
-        <View style={styles.graphSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>System Health</Text>
-            <View style={styles.legend}>
-              <View style={[styles.dotBlue, { marginRight: 4 }]} />
-              <Text style={styles.legendText}>Response Time</Text>
-              <View style={[styles.dotGray, { marginLeft: 16, marginRight: 4 }]} />
-              <Text style={styles.legendText}>Traffic Load</Text>
-            </View>
-          </View>
-          <View style={styles.graphMock}>
-            {/* Simple CSS-based sine wave mock or just a placeholder for the graph */}
-            <View style={styles.graphLine} />
-            <View style={styles.graphTooltip}>
-              <Text style={styles.tooltipText}>248ms (Avg)</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Active Workers */}
-        <View style={styles.workersSection}>
-          <Text style={styles.sectionTitle}>Active Workers</Text>
-          <View style={styles.workerList}>
-            <View style={styles.workerItem}>
-              <View style={styles.workerIconBlue} />
-              <View style={styles.workerInfo}>
-                <Text style={styles.workerName}>Ingestion-01</Text>
-                <Text style={styles.workerTask}>Parsing RSS XML</Text>
-              </View>
-              <Text style={styles.workerCpu}>88% CPU</Text>
-            </View>
-            <View style={styles.workerItem}>
-              <View style={styles.workerIconLightBlue} />
-              <View style={styles.workerInfo}>
-                <Text style={styles.workerName}>Ingestion-02</Text>
-                <Text style={styles.workerTask}>Analyzing Metadata</Text>
-              </View>
-              <Text style={styles.workerCpu}>42% CPU</Text>
-            </View>
-            <View style={styles.workerItem}>
-              <View style={styles.workerIconGray} />
-              <View style={styles.workerInfo}>
-                <Text style={styles.workerName}>Worker-Idle</Text>
-                <Text style={styles.workerTask}>Standby</Text>
-              </View>
-              <Text style={styles.workerCpuGray}>2% CPU</Text>
-            </View>
-          </View>
-          <Text style={styles.viewAllText}>View All Nodes →</Text>
-        </View>
+      {/* Quick Actions */}
+      <View style={styles.quickActionsRow}>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={() => router.push('/(admin)/feeds' as any)}
+        >
+          <Text style={styles.quickActionIcon}>📡</Text>
+          <Text style={styles.quickActionTitle}>Manage Feeds</Text>
+          <Text style={styles.quickActionDesc}>Add, view, and manage RSS feeds</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={() => router.push('/(admin)/ingestion-logs' as any)}
+        >
+          <Text style={styles.quickActionIcon}>📋</Text>
+          <Text style={styles.quickActionTitle}>View Logs</Text>
+          <Text style={styles.quickActionDesc}>Review ingestion job history</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={() => router.push('/(admin)/raw-data' as any)}
+        >
+          <Text style={styles.quickActionIcon}>🗃️</Text>
+          <Text style={styles.quickActionTitle}>Raw Data</Text>
+          <Text style={styles.quickActionDesc}>Browse raw podcast data</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Recent Ingestion Jobs Table */}
+      {/* Recent Ingestion Jobs */}
       <View style={styles.tableSection}>
         <View style={styles.tableHeader}>
           <Text style={styles.sectionTitle}>Recent Ingestion Jobs</Text>
           <View style={styles.tableActions}>
-            <View style={styles.filterBtn}>
-              <Text style={styles.filterBtnText}>Filter</Text>
-            </View>
-            <View style={styles.exportBtn}>
-              <Text style={styles.exportBtnText}>Export CSV</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.viewAllBtn}
+              onPress={() => router.push('/(admin)/ingestion-logs' as any)}
+            >
+              <Text style={styles.viewAllBtnText}>View All →</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.table}>
-          <View style={styles.tableHead}>
-            <Text style={[styles.th, { flex: 1 }]}>JOB ID</Text>
-            <Text style={[styles.th, { flex: 2 }]}>FEED SOURCE</Text>
-            <Text style={[styles.th, { flex: 1.5 }]}>TIMESTAMP</Text>
-            <Text style={[styles.th, { flex: 1 }]}>DURATION</Text>
-            <Text style={[styles.th, { flex: 1 }]}>ITEMS</Text>
-            <Text style={[styles.th, { flex: 1.5 }]}>STATUS</Text>
-            <Text style={[styles.th, { width: 50, textAlign: 'center' }]}>ACTION</Text>
+        {recentJobs.length === 0 ? (
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>No ingestion jobs yet. Add a feed to get started.</Text>
           </View>
-          
-          {/* Table Row 1 */}
-          <View style={styles.tr}>
-            <Text style={[styles.td, { flex: 1 }]}>#J-92812</Text>
-            <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>The Tech Daily</Text>
-            <Text style={[styles.td, { flex: 1.5 }]}>Oct 24, 09:42:12</Text>
-            <Text style={[styles.td, { flex: 1 }]}>12.4s</Text>
-            <Text style={[styles.td, { flex: 1 }]}>142</Text>
-            <View style={{ flex: 1.5 }}>
-              <View style={styles.badgeSuccess}>
-                <Text style={styles.badgeSuccessText}>SUCCESS</Text>
-              </View>
+        ) : (
+          <View style={styles.table}>
+            <View style={styles.tableHead}>
+              <Text style={[styles.th, { flex: 1.5 }]}>FEED</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>TIME</Text>
+              <Text style={[styles.th, { flex: 1 }]}>ITEMS</Text>
+              <Text style={[styles.th, { flex: 1 }]}>STATUS</Text>
             </View>
-            <Text style={[styles.td, { width: 50, textAlign: 'center', color: '#1D4ED8', fontWeight: 'bold' }]}>•••</Text>
+            {recentJobs.map((job) => {
+              const badge = getStatusBadge(job.status);
+              return (
+                <View key={job.id} style={styles.tr}>
+                  <Text style={[styles.td, { flex: 1.5, fontWeight: '500' }]} numberOfLines={1}>
+                    {job.feed_title || 'Unknown'}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1.5 }]}>
+                    {new Date(job.started_at).toLocaleString()}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{job.items_processed}</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                      <Text style={[styles.badgeText, { color: badge.text }]}>{badge.label}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
           </View>
-
-          {/* Table Row 2 */}
-          <View style={styles.tr}>
-            <Text style={[styles.td, { flex: 1 }]}>#J-92811</Text>
-            <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>Global Markets Weekly</Text>
-            <Text style={[styles.td, { flex: 1.5 }]}>Oct 24, 09:40:01</Text>
-            <Text style={[styles.td, { flex: 1 }]}>1.2s</Text>
-            <Text style={[styles.td, { flex: 1 }]}>0</Text>
-            <View style={{ flex: 1.5 }}>
-              <View style={styles.badgeError}>
-                <Text style={styles.badgeErrorText}>ERROR</Text>
-              </View>
-            </View>
-            <Text style={[styles.td, { width: 50, textAlign: 'center', color: '#1D4ED8', fontWeight: 'bold' }]}>•••</Text>
-          </View>
-
-          {/* Table Row 3 */}
-          <View style={styles.tr}>
-            <Text style={[styles.td, { flex: 1 }]}>#J-92810</Text>
-            <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>Crime Chronicles</Text>
-            <Text style={[styles.td, { flex: 1.5 }]}>Oct 24, 09:38:45</Text>
-            <Text style={[styles.td, { flex: 1 }]}>--</Text>
-            <Text style={[styles.td, { flex: 1 }]}>56</Text>
-            <View style={{ flex: 1.5 }}>
-              <View style={styles.badgeInfo}>
-                <Text style={styles.badgeInfoText}>RUNNING</Text>
-              </View>
-            </View>
-            <Text style={[styles.td, { width: 50, textAlign: 'center', color: '#1D4ED8', fontWeight: 'bold' }]}>•••</Text>
-          </View>
-
-        </View>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    gap: 24,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 16,
-    flexWrap: 'wrap',
-  },
+  container: { flex: 1 },
+  contentContainer: { gap: 24 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B' },
+  statsRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
   statCard: {
-    flex: 1,
-    minWidth: 160,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
+    flex: 1, minWidth: 160, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  statCardError: { borderColor: '#FCA5A5' },
+  statTitle: { fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 12, letterSpacing: 0.5 },
+  statValue: { fontSize: 30, fontWeight: '700', color: '#0F172A', marginBottom: 6 },
+  statSubtext: { fontSize: 13, fontWeight: '500' },
+  quickActionsRow: { flexDirection: 'row', gap: 16 },
+  quickActionCard: {
+    flex: 1, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  statCardError: {
-    borderColor: '#FCA5A5',
-  },
-  statTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    marginBottom: 12,
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-    numberOfLines: 1,
-  },
-  statChange: {
-    fontSize: 13,
-    color: '#10B981',
-    fontWeight: '500',
-  },
-  statSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  statSuccess: {
-    fontSize: 13,
-    color: '#10B981',
-    fontWeight: '600',
-  },
-  textError: {
-    color: '#DC2626',
-  },
-  textErrorUnderline: {
-    color: '#DC2626',
-    textDecorationLine: 'underline',
-  },
-  syncStatusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dotGreen: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-  },
-  dotBlue: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2563EB',
-  },
-  dotGray: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#CBD5E1',
-  },
-  mainRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  graphSection: {
-    flex: 3,
-    minWidth: 300,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    padding: 24,
-  },
-  workersSection: {
-    flex: 1.5,
-    minWidth: 220,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    padding: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  graphMock: {
-    height: 250,
-    borderBottomWidth: 1,
-    borderLeftWidth: 1,
-    borderColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  graphLine: {
-    position: 'absolute',
-    top: '40%',
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: '#2563EB',
-    borderRadius: 2,
-    opacity: 0.5,
-    transform: [{ rotate: '-5deg' }],
-  },
-  graphTooltip: {
-    position: 'absolute',
-    top: '30%',
-    left: '60%',
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  tooltipText: {
-    color: '#F8FAFC',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  workerList: {
-    gap: 16,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  workerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  workerIconBlue: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#DBEAFE',
-    marginRight: 12,
-  },
-  workerIconLightBlue: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#E0F2FE',
-    marginRight: 12,
-  },
-  workerIconGray: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
-    marginRight: 12,
-  },
-  workerInfo: {
-    flex: 1,
-    marginRight: 4,
-  },
-  workerName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  workerTask: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  workerCpu: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563EB',
-  },
-  workerCpuGray: {
-    fontSize: 13,
-    color: '#94A3B8',
-  },
-  viewAllText: {
-    color: '#2563EB',
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  tableSection: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-  },
+  quickActionIcon: { fontSize: 24, marginBottom: 8 },
+  quickActionTitle: { fontSize: 14, fontWeight: '600', color: '#0F172A', marginBottom: 4 },
+  quickActionDesc: { fontSize: 12, color: '#64748B' },
+  tableSection: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 },
   tableHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 24, borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
   },
-  tableActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 4,
-  },
-  filterBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#475569',
-  },
-  exportBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 4,
-  },
-  exportBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#475569',
-  },
-  table: {
-    width: '100%',
-  },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#0F172A' },
+  tableActions: { flexDirection: 'row', gap: 12 },
+  viewAllBtn: { paddingHorizontal: 12, paddingVertical: 6 },
+  viewAllBtnText: { fontSize: 13, color: '#2563EB', fontWeight: '600' },
+  table: { width: '100%' },
   tableHead: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC',
   },
-  th: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
+  th: { fontSize: 12, fontWeight: '600', color: '#64748B', letterSpacing: 0.5 },
   tr: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    alignItems: 'center',
+    flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F1F5F9', alignItems: 'center',
   },
-  td: {
-    fontSize: 14,
-    color: '#334155',
-  },
-  badgeSuccess: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  badgeSuccessText: {
-    color: '#059669',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  badgeError: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  badgeErrorText: {
-    color: '#DC2626',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  badgeInfo: {
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  badgeInfoText: {
-    color: '#2563EB',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  td: { fontSize: 14, color: '#334155' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+  emptyRow: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 14, color: '#94A3B8' },
 });

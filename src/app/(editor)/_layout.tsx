@@ -50,19 +50,34 @@ export default function EditorLayout() {
         </View>
 
         <View style={styles.navGroup}>
-          <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
+          <TouchableOpacity
+            style={[styles.navItem, styles.navItemActive]}
+            onPress={() => router.push('/(editor)' as any)}
+          >
             <Text style={[styles.navItemText, styles.navItemTextActive]}>My Content</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/(editor)' as any)}
+          >
             <Text style={styles.navItemText}>Podcasts</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/(editor)' as any)}
+          >
             <Text style={styles.navItemText}>Episodes</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/(editor)' as any)}
+          >
             <Text style={styles.navItemText}>Drafts</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/(editor)' as any)}
+          >
             <Text style={styles.navItemText}>Media Library</Text>
           </TouchableOpacity>
         </View>

@@ -1,12 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Slot, useRouter } from 'expo-router';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+  Dimensions,
+} from 'react-native';
+import { Slot, useRouter, useSegments, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth, isMockMode } from '@/lib/auth';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_WIDE = SCREEN_WIDTH >= 1024;
+
+const NAV_ITEMS = [
+  { icon: 'home', label: 'Home', route: '/(user)' },
+  { icon: 'compass-outline', label: 'Discover', route: '/(user)' },
+  { icon: 'library-outline', label: 'Library', route: '/(user)' },
+  { icon: 'layers-outline', label: 'Subscriptions', route: '/(user)' },
+  { icon: 'time-outline', label: 'History', route: '/(user)' },
+  { icon: 'settings-outline', label: 'Settings', route: '/(user)' },
+];
 
 export default function UserLayout() {
   const router = useRouter();
+  const segments = useSegments();
+  const pathname = usePathname();
   const { role, loading, signOut } = useAuth();
   const [checking, setChecking] = useState(true);
+  const insets = useSafeAreaInsets();
+
+  // Determine if we're on an auth screen (full-screen, no chrome)
+  const segs = segments as string[];
+  const isAuthScreen = segs.includes('auth');
 
   useEffect(() => {
     if (loading) return;
@@ -16,8 +45,7 @@ export default function UserLayout() {
       return;
     }
 
-    // Any authenticated user can access the User view
-    if (!role) {
+    if (!role || role !== 'User') {
       router.replace('/');
     } else {
       setChecking(false);
@@ -36,72 +64,159 @@ export default function UserLayout() {
   if (loading || checking) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#38BDF8" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isAuthScreen && styles.containerFull]}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarHeader}>
-          <Text style={styles.brandTitle}>PodcastHub</Text>
-          <Text style={styles.brandVersion}>v2.4.0</Text>
-        </View>
-
-        <View style={styles.navGroup}>
-          <TouchableOpacity style={[styles.navItem, styles.navItemActive]}>
-            <Text style={[styles.navItemText, styles.navItemTextActive]}>Browse</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>My Library</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Favorites</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Playlists</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.spacer} />
-
-        <View style={styles.footerNavGroup}>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Account</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.profileSection}>
-          <View style={styles.avatarPlaceholder} />
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Public User</Text>
-            <Text style={styles.profileRole}>LISTENER</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>Exit</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Main Content Area */}
-      <View style={styles.mainContent}>
-        <View style={styles.topbar}>
-          <Text style={styles.pageTitle}>Discover Podcasts</Text>
-          <View style={styles.topbarRight}>
-            <View style={styles.searchBar}>
-              <Text style={styles.searchText}>Search podcasts...</Text>
+      {!isAuthScreen && IS_WIDE && (
+        <View style={styles.sidebar}>
+          <View style={styles.sidebarHeader}>
+            <View style={styles.logoIcon}>
+              <Ionicons name="radio" size={20} color="#38BDF8" />
             </View>
-            <View style={styles.avatarPlaceholderSmall} />
+            <Text style={styles.logoText}>SoundWave</Text>
+            <Text style={styles.logoSubtext}>Discovery</Text>
+          </View>
+
+          <View style={styles.navSection}>
+            {NAV_ITEMS.map((item) => {
+              const isActive = item.route ? pathname === item.route : false;
+              return (
+                <TouchableOpacity
+                  key={item.label}
+                  style={[styles.navItem, isActive && styles.navItemActive]}
+                  onPress={() => item.route && router.push(item.route as any)}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={20}
+                    color={isActive ? '#38BDF8' : '#94A3B8'}
+                  />
+                  <Text
+                    style={[
+                      styles.navLabel,
+                      isActive && styles.navLabelActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.sidebarBottom}>
+            <TouchableOpacity style={styles.createButton}>
+              <Ionicons name="add" size={20} color="#0F172A" />
+              <Text style={styles.createButtonText}>Create Playlist</Text>
+            </TouchableOpacity>
+
+            <View style={styles.profileRow}>
+              <View style={styles.avatarSmall}>
+                <Ionicons name="person" size={16} color="#FFFFFF" />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>Public User</Text>
+                <Text style={styles.profileRole}>LISTENER</Text>
+              </View>
+              <TouchableOpacity onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+      )}
+
+      {/* Main Area */}
+      <View style={styles.mainArea}>
+        {!isAuthScreen && (
+          <View style={styles.topbar}>
+            <View style={styles.searchWrapper}>
+              <Ionicons name="search" size={18} color="#64748B" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search podcasts, episodes, hosts..."
+                placeholderTextColor="#64748B"
+              />
+            </View>
+            <View style={styles.topbarActions}>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="notifications-outline" size={22} color="#64748B" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Ionicons name="settings-outline" size={22} color="#64748B" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.avatar}>
+                <Ionicons name="person" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Content */}
         <View style={styles.contentArea}>
           <Slot />
         </View>
+
+        {!isAuthScreen && (
+          <View
+            style={[
+              styles.playerBar,
+              { paddingBottom: Math.max(insets.bottom, 8) },
+            ]}
+          >
+            <View style={styles.playerContent}>
+              <View style={styles.playerTrack}>
+                <View style={styles.playerArt}>
+                  <Ionicons name="musical-note" size={20} color="#38BDF8" />
+                </View>
+                <View>
+                  <Text style={styles.playerTitle} numberOfLines={1}>
+                    The Daily: Understanding the Crisis
+                  </Text>
+                  <Text style={styles.playerAuthor}>The Daily</Text>
+                </View>
+              </View>
+
+              <View style={styles.playerControls}>
+                <TouchableOpacity>
+                  <Ionicons name="shuffle" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="play-skip-back" size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.playButton}>
+                  <Ionicons name="play" size={22} color="#0F172A" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="play-skip-forward" size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="infinite" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.playerUtilities}>
+                <TouchableOpacity>
+                  <Ionicons name="list-outline" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="tv-outline" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="volume-high-outline" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons name="expand-outline" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -112,84 +227,110 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#0F172A',
   },
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F8FAFC',
   },
+  containerFull: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    backgroundColor: '#0F172A',
+  },
+  // Sidebar
   sidebar: {
-    width: 260,
-    backgroundColor: '#F0FDF4',
-    borderRightWidth: 1,
-    borderRightColor: '#BBF7D0',
+    width: 240,
+    backgroundColor: '#0F172A',
     paddingVertical: 24,
     display: 'flex',
     flexDirection: 'column',
+    flexShrink: 0,
   },
   sidebarHeader: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    marginBottom: 32,
   },
-  brandTitle: {
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#047857',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
-  brandVersion: {
-    fontSize: 12,
-    color: '#059669',
-    marginTop: 4,
+  logoSubtext: {
+    fontSize: 11,
+    color: '#475569',
+    marginTop: 2,
+    fontWeight: '500',
   },
-  navGroup: {
+  navSection: {
+    flex: 1,
     paddingHorizontal: 12,
   },
   navItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  navItemActive: {
-    backgroundColor: '#DCFCE7',
-    borderLeftWidth: 3,
-    borderLeftColor: '#059669',
-    borderRadius: 0,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
-  },
-  navItemText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  navItemTextActive: {
-    color: '#047857',
-    fontWeight: '600',
-  },
-  spacer: {
-    flex: 1,
-  },
-  footerNavGroup: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#BBF7D0',
-    paddingTop: 16,
-  },
-  profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 2,
+    gap: 12,
   },
-  avatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#A7F3D0',
-    marginRight: 12,
+  navItemActive: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+  },
+  navLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  navLabelActive: {
+    color: '#38BDF8',
+    fontWeight: '600',
+  },
+  sidebarBottom: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 16,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#38BDF8',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  createButtonText: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avatarSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#38BDF8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileInfo: {
     flex: 1,
@@ -197,66 +338,126 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   profileRole: {
     fontSize: 10,
-    color: '#059669',
-    marginTop: 2,
+    color: '#64748B',
+    marginTop: 1,
   },
-  logoutBtn: {
-    padding: 4,
-  },
-  logoutText: {
-    fontSize: 12,
-    color: '#EF4444',
-  },
-  mainContent: {
+  // Main Area
+  mainArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     flexDirection: 'column',
   },
+  // Topbar
   topbar: {
-    height: 72,
-    borderBottomWidth: 1,
-    borderBottomColor: '#BBF7D0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  pageTitle: {
-    fontSize: 20,
+  searchWrapper: {
+    flex: 1,
+    maxWidth: 480,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  topbarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 16,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#38BDF8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Content area
+  contentArea: {
+    flex: 1,
+  },
+  // Player Bar
+  playerBar: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  playerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  playerTrack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  playerArt: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playerTitle: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
+    maxWidth: 200,
   },
-  topbarRight: {
+  playerAuthor: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  playerControls: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
-  searchBar: {
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    width: 300,
-    backgroundColor: '#FFFFFF',
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#38BDF8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  searchText: {
-    color: '#6EE7B7',
-    fontSize: 14,
-  },
-  avatarPlaceholderSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#A7F3D0',
-  },
-  contentArea: {
-    flex: 1,
-    padding: 32,
-    backgroundColor: '#FAFAF9',
+  playerUtilities: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginLeft: 16,
   },
 });
