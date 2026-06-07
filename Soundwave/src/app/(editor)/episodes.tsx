@@ -4,6 +4,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useEditorTheme } from '@/contexts/EditorThemeContext';
+import { EditorThemeColors } from '@/constants/EditorTheme';
 
 type Episode = {
   id: string;
@@ -23,6 +25,7 @@ type Episode = {
 type FilterKey = 'all' | 'published' | 'draft' | 'hidden';
 
 export default function EpisodesPage() {
+  const { colors } = useEditorTheme();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -98,10 +101,10 @@ export default function EpisodesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'published': return { bg: '#D1FAE5', text: '#059669', label: 'PUBLISHED' };
-      case 'draft': return { bg: '#F3F4F6', text: '#6B7280', label: 'DRAFT' };
-      case 'hidden': return { bg: '#FEE2E2', text: '#DC2626', label: 'HIDDEN' };
-      default: return { bg: '#F3F4F6', text: '#6B7280', label: status.toUpperCase() };
+      case 'published': return { bg: colors.badgeSuccess, text: colors.badgeSuccessText, label: 'PUBLISHED' };
+      case 'draft': return { bg: colors.badgeNeutral, text: colors.badgeNeutralText, label: 'DRAFT' };
+      case 'hidden': return { bg: colors.badgeDanger, text: colors.badgeDangerText, label: 'HIDDEN' };
+      default: return { bg: colors.badgeNeutral, text: colors.badgeNeutralText, label: status.toUpperCase() };
     }
   };
 
@@ -119,10 +122,12 @@ export default function EpisodesPage() {
     hidden: episodes.filter(e => e.status === 'hidden').length,
   };
 
+  const styles = makeStyles(colors);
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -139,15 +144,15 @@ export default function EpisodesPage() {
       <View style={styles.summaryRow}>
         <View style={styles.summaryCard}>
           <Text style={styles.summaryValue}>{counts.published}</Text>
-          <Text style={[styles.summaryLabel, { color: '#059669' }]}>Published</Text>
+          <Text style={[styles.summaryLabel, { color: colors.badgeSuccessText }]}>Published</Text>
         </View>
         <View style={styles.summaryCard}>
           <Text style={styles.summaryValue}>{counts.draft}</Text>
-          <Text style={[styles.summaryLabel, { color: '#6B7280' }]}>Drafts</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Drafts</Text>
         </View>
         <View style={styles.summaryCard}>
           <Text style={styles.summaryValue}>{counts.hidden}</Text>
-          <Text style={[styles.summaryLabel, { color: '#DC2626' }]}>Hidden</Text>
+          <Text style={[styles.summaryLabel, { color: colors.danger }]}>Hidden</Text>
         </View>
       </View>
 
@@ -203,7 +208,7 @@ export default function EpisodesPage() {
                 </View>
                 <View style={{ width: 100, flexDirection: 'row', gap: 4 }}>
                   {actionLoading === ep.id ? (
-                    <ActivityIndicator size="small" color="#7C3AED" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
                     <>
                       {ep.status !== 'published' && (
@@ -233,47 +238,47 @@ export default function EpisodesPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAF9' },
+const makeStyles = (colors: EditorThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   contentContainer: { gap: 20, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF9' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   header: {},
-  pageTitle: { fontSize: 24, fontWeight: '700', color: '#1F2937' },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
+  pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
   summaryRow: { flexDirection: 'row', gap: 12 },
   summaryCard: {
-    flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 8,
-    borderWidth: 1, borderColor: '#E9D5FF', alignItems: 'center',
+    flex: 1, backgroundColor: colors.surface, padding: 16, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
-  summaryValue: { fontSize: 24, fontWeight: '700', color: '#1F2937' },
+  summaryValue: { fontSize: 24, fontWeight: '700', color: colors.text },
   summaryLabel: { fontSize: 12, fontWeight: '500', marginTop: 4 },
   filterRow: { flexDirection: 'row', gap: 8 },
   filterTab: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.tabBg,
   },
-  filterTabActive: { backgroundColor: '#EDE9FE' },
-  filterTabText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
-  filterTabTextActive: { color: '#7C3AED', fontWeight: '600' },
+  filterTabActive: { backgroundColor: colors.tabActiveBg },
+  filterTabText: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
+  filterTabTextActive: { color: colors.primary, fontWeight: '600' },
   tableSection: {
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E9D5FF', borderRadius: 8,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8,
     overflow: 'hidden',
   },
   tableHead: {
     flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3E8FF', backgroundColor: '#FAFAF9',
+    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.tableHeadBg,
   },
-  th: { fontSize: 11, fontWeight: '600', color: '#6B7280', letterSpacing: 0.5 },
+  th: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, letterSpacing: 0.5 },
   tr: {
     flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F5F3FF', alignItems: 'center',
+    borderBottomWidth: 1, borderBottomColor: colors.tableRowBorder, alignItems: 'center',
   },
-  td: { fontSize: 13, color: '#374151' },
-  tdSub: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  td: { fontSize: 13, color: colors.textSecondary },
+  tdSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
   badgeText: { fontSize: 10, fontWeight: '700' },
-  actionGreen: { fontSize: 11, fontWeight: '600', color: '#059669', paddingHorizontal: 4 },
-  actionGray: { fontSize: 11, fontWeight: '600', color: '#6B7280', paddingHorizontal: 4 },
-  actionRed: { fontSize: 11, fontWeight: '600', color: '#DC2626', paddingHorizontal: 4 },
+  actionGreen: { fontSize: 11, fontWeight: '600', color: colors.badgeSuccessText, paddingHorizontal: 4 },
+  actionGray: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, paddingHorizontal: 4 },
+  actionRed: { fontSize: 11, fontWeight: '600', color: colors.danger, paddingHorizontal: 4 },
   emptyState: { padding: 40, alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#94A3B8' },
+  emptyText: { fontSize: 14, color: colors.textMuted },
 });

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useEditorTheme } from '@/contexts/EditorThemeContext';
+import { EditorThemeColors } from '@/constants/EditorTheme';
 
 type PodcastWithCount = {
   id: string;
@@ -20,6 +22,7 @@ type DashboardStats = {
 };
 
 export default function EditorDashboard() {
+  const { colors } = useEditorTheme();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalPodcasts: 0, totalEpisodes: 0, draftEpisodes: 0, publishedEpisodes: 0,
@@ -91,16 +94,18 @@ export default function EditorDashboard() {
   );
 
   if (loading) {
+    const styles = makeStyles(colors);
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
     );
   }
 
+  const styles = makeStyles(colors);
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       {/* Stats Cards */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -114,14 +119,14 @@ export default function EditorDashboard() {
           <Text style={styles.statSubtext}>Across all podcasts</Text>
         </View>
         <View style={[styles.statCard, stats.draftEpisodes > 0 && styles.statCardWarning]}>
-          <Text style={[styles.statTitle, stats.draftEpisodes > 0 && { color: '#D97706' }]}>
+          <Text style={[styles.statTitle, stats.draftEpisodes > 0 && { color: colors.warning }]}>
             DRAFTS
           </Text>
-          <Text style={[styles.statValue, stats.draftEpisodes > 0 && { color: '#D97706' }]}>
+          <Text style={[styles.statValue, stats.draftEpisodes > 0 && { color: colors.warning }]}>
             {stats.draftEpisodes}
           </Text>
           <TouchableOpacity onPress={() => router.push('/(editor)/drafts' as any)}>
-            <Text style={[styles.statSubtext, { color: '#7C3AED', textDecorationLine: 'underline' }]}>
+            <Text style={[styles.statSubtext, { color: colors.primary, textDecorationLine: 'underline' }]}>
               {stats.draftEpisodes > 0 ? 'Needs review →' : 'No pending drafts'}
             </Text>
           </TouchableOpacity>
@@ -219,56 +224,56 @@ export default function EditorDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAF9' },
+const makeStyles = (colors: EditorThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   contentContainer: { gap: 24, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF9' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#6B7280' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  loadingText: { marginTop: 12, fontSize: 14, color: colors.textSecondary },
   statsRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
   statCard: {
-    flex: 1, minWidth: 160, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8,
-    borderWidth: 1, borderColor: '#E9D5FF',
+    flex: 1, minWidth: 160, backgroundColor: colors.surface, padding: 20, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  statCardWarning: { borderColor: '#FDE68A' },
-  statTitle: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 12, letterSpacing: 0.5 },
-  statValue: { fontSize: 30, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
-  statSubtext: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
+  statCardWarning: { borderColor: colors.warningBg },
+  statTitle: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 12, letterSpacing: 0.5 },
+  statValue: { fontSize: 30, fontWeight: '700', color: colors.text, marginBottom: 6 },
+  statSubtext: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
   tableSection: {
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E9D5FF', borderRadius: 8,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 8,
   },
   tableHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 24, borderBottomWidth: 1, borderBottomColor: '#E9D5FF',
+    padding: 24, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
   viewAllBtn: { paddingHorizontal: 12, paddingVertical: 6 },
-  viewAllBtnText: { fontSize: 13, color: '#7C3AED', fontWeight: '600' },
+  viewAllBtnText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
   table: { width: '100%' },
   tableHead: {
     flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3E8FF', backgroundColor: '#FAFAF9',
+    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.tableHeadBg,
   },
-  th: { fontSize: 11, fontWeight: '600', color: '#6B7280', letterSpacing: 0.5 },
+  th: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, letterSpacing: 0.5 },
   tr: {
     flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: '#F5F3FF', alignItems: 'center',
+    borderBottomWidth: 1, borderBottomColor: colors.tableRowBorder, alignItems: 'center',
   },
-  td: { fontSize: 14, color: '#374151' },
+  td: { fontSize: 14, color: colors.textSecondary },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
   badgeText: { fontSize: 10, fontWeight: '700' },
-  badgeSuccess: { backgroundColor: '#D1FAE5' },
-  badgeSuccessText: { color: '#059669' },
-  badgeDraft: { backgroundColor: '#F3F4F6' },
-  badgeDraftText: { color: '#6B7280' },
-  actionText: { color: '#7C3AED', fontWeight: '600', fontSize: 13 },
+  badgeSuccess: { backgroundColor: colors.badgeSuccess },
+  badgeSuccessText: { color: colors.badgeSuccessText },
+  badgeDraft: { backgroundColor: colors.badgeNeutral },
+  badgeDraftText: { color: colors.badgeNeutralText },
+  actionText: { color: colors.primary, fontWeight: '600', fontSize: 13 },
   quickActionsRow: { flexDirection: 'row', gap: 16 },
   quickAction: {
-    flex: 1, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, borderWidth: 1,
-    borderColor: '#E9D5FF',
+    flex: 1, backgroundColor: colors.surface, padding: 20, borderRadius: 8, borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   quickActionIcon: { fontSize: 24, marginBottom: 8 },
-  quickActionTitle: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 4 },
-  quickActionDesc: { fontSize: 12, color: '#6B7280' },
+  quickActionTitle: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 4 },
+  quickActionDesc: { fontSize: 12, color: colors.textSecondary },
   emptyRow: { padding: 40, alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#94A3B8' },
+  emptyText: { fontSize: 14, color: colors.textMuted },
 });

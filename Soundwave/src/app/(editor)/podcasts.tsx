@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useEditorTheme } from '@/contexts/EditorThemeContext';
+import { EditorThemeColors } from '@/constants/EditorTheme';
 
 type Podcast = {
   id: string;
@@ -26,6 +28,7 @@ type EditForm = {
 };
 
 export default function PodcastsPage() {
+  const { colors } = useEditorTheme();
   const router = useRouter();
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,10 +126,12 @@ export default function PodcastsPage() {
     );
   };
 
+  const styles = makeStyles(colors);
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -145,7 +150,7 @@ export default function PodcastsPage() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search podcasts by title..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
         />
@@ -200,7 +205,7 @@ export default function PodcastsPage() {
                   style={[styles.actionBtn, podcast.featured ? styles.actionBtnWarning : styles.actionBtnOutline]}
                   onPress={() => toggleFeatured(podcast)}
                 >
-                  <Text style={[styles.actionBtnText, podcast.featured && { color: '#D97706' }]}>
+                  <Text style={[styles.actionBtnText, podcast.featured && { color: colors.warning }]}>
                     {podcast.featured ? 'Unfeature' : 'Feature'}
                   </Text>
                 </TouchableOpacity>
@@ -268,7 +273,7 @@ export default function PodcastsPage() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <Text style={styles.saveBtnText}>Save Changes</Text>
                 )}
@@ -281,85 +286,85 @@ export default function PodcastsPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAF9' },
+const makeStyles = (colors: EditorThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   contentContainer: { gap: 20, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF9' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   header: {},
-  pageTitle: { fontSize: 24, fontWeight: '700', color: '#1F2937' },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
+  pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E9D5FF', borderRadius: 8, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 14,
     paddingVertical: 10, gap: 8,
   },
   searchIcon: { fontSize: 14 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1F2937' },
-  clearBtn: { fontSize: 16, color: '#94A3B8', paddingHorizontal: 4 },
+  searchInput: { flex: 1, fontSize: 14, color: colors.text },
+  clearBtn: { fontSize: 16, color: colors.textMuted, paddingHorizontal: 4 },
   podcastList: { gap: 12 },
   podcastCard: {
-    flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#FFFFFF',
-    padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF',
+    flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface,
+    padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border,
   },
   podcastCardLeft: { flexDirection: 'row', flex: 1, gap: 14 },
   podcastAvatar: {
-    width: 48, height: 48, borderRadius: 8, backgroundColor: '#EDE9FE',
+    width: 48, height: 48, borderRadius: 8, backgroundColor: colors.sidebarIconActiveBg,
     justifyContent: 'center', alignItems: 'center',
   },
-  podcastAvatarText: { fontSize: 18, fontWeight: '700', color: '#7C3AED' },
+  podcastAvatarText: { fontSize: 18, fontWeight: '700', color: colors.primary },
   podcastInfo: { flex: 1, justifyContent: 'center' },
-  podcastTitle: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 2 },
-  podcastAuthor: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
+  podcastTitle: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 2 },
+  podcastAuthor: { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
   podcastMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaLang: {
-    fontSize: 11, color: '#6B7280', backgroundColor: '#F3F4F6',
+    fontSize: 11, color: colors.textSecondary, backgroundColor: colors.badgeNeutral,
     paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
   },
   featuredBadge: {
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.badgeNeutral,
   },
-  featuredBadgeActive: { backgroundColor: '#D1FAE5' },
-  featuredBadgeText: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
-  featuredBadgeTextActive: { color: '#059669' },
+  featuredBadgeActive: { backgroundColor: colors.badgeSuccess },
+  featuredBadgeText: { fontSize: 10, fontWeight: '700', color: colors.textSecondary },
+  featuredBadgeTextActive: { color: colors.badgeSuccessText },
   podcastActions: { justifyContent: 'center', gap: 8, marginLeft: 12 },
   actionBtn: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, backgroundColor: '#F3E8FF',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, backgroundColor: colors.borderLight,
     alignItems: 'center',
   },
-  actionBtnOutline: { backgroundColor: '#F3E8FF' },
-  actionBtnWarning: { backgroundColor: '#FEF3C7' },
-  actionBtnText: { fontSize: 12, fontWeight: '600', color: '#7C3AED' },
+  actionBtnOutline: { backgroundColor: colors.borderLight },
+  actionBtnWarning: { backgroundColor: colors.warningBg },
+  actionBtnText: { fontSize: 12, fontWeight: '600', color: colors.primary },
   emptyState: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyIcon: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
-  emptyDesc: { fontSize: 14, color: '#6B7280', textAlign: 'center', maxWidth: 300 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  emptyDesc: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', maxWidth: 300 },
   // Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center',
+    flex: 1, backgroundColor: colors.modalOverlay, justifyContent: 'center',
     alignItems: 'center', padding: 24,
   },
   modalContent: {
-    width: '100%', maxWidth: 500, backgroundColor: '#FFFFFF', borderRadius: 12,
+    width: '100%', maxWidth: 500, backgroundColor: colors.surface, borderRadius: 12,
     padding: 24,
   },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 20 },
   formGroup: { marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   input: {
-    borderWidth: 1, borderColor: '#E9D5FF', borderRadius: 6, padding: 12,
-    fontSize: 14, color: '#1F2937', backgroundColor: '#FAFAF9',
+    borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 12,
+    fontSize: 14, color: colors.text, backgroundColor: colors.background,
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   cancelBtn: {
     flex: 1, paddingVertical: 12, borderRadius: 6, alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.badgeNeutral,
   },
-  cancelBtnText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
+  cancelBtnText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   saveBtn: {
     flex: 1, paddingVertical: 12, borderRadius: 6, alignItems: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: colors.primary,
   },
-  saveBtnDisabled: { backgroundColor: '#C4B5FD' },
-  saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  saveBtnDisabled: { backgroundColor: colors.primaryMuted },
+  saveBtnText: { color: colors.textInverse, fontWeight: '600', fontSize: 14 },
 });

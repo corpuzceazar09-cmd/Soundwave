@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, usePathname } from 'expo-router';
 import { useAuth, isMockMode } from '@/lib/auth';
+import { EditorThemeProvider, useEditorTheme } from '@/contexts/EditorThemeContext';
 
 type NavItem = {
   label: string;
@@ -16,10 +17,11 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Drafts', route: '/(editor)/drafts', icon: '!' },
 ];
 
-export default function EditorLayout() {
+function EditorLayoutInner() {
   const router = useRouter();
   const pathname = usePathname();
   const { role, loading, signOut } = useAuth();
+  const { colors, isDark, toggleTheme } = useEditorTheme();
   const [checking, setChecking] = useState(true);
   const [timedOut, setTimedOut] = useState(false);
   const loadingRef = useRef(loading);
@@ -73,15 +75,15 @@ export default function EditorLayout() {
 
   if (timedOut) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={{ color: '#64748B', fontSize: 16, marginBottom: 16, textAlign: 'center', paddingHorizontal: 32 }}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.textSecondary, fontSize: 16, marginBottom: 16, textAlign: 'center', paddingHorizontal: 32 }}>
           Unable to connect to authentication service. Check your internet connection and try again.
         </Text>
         <TouchableOpacity
-          style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 6 }}
+          style={{ backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 6 }}
           onPress={() => { setTimedOut(false); setChecking(true); window.location.reload(); }}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>Retry</Text>
+          <Text style={{ color: colors.textInverse, fontWeight: '600', fontSize: 15 }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -89,70 +91,92 @@ export default function EditorLayout() {
 
   if (loading || checking) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
+      <View style={[styles.sidebar, { backgroundColor: colors.sidebarBg, borderRightColor: colors.sidebarBorder }]}>
         <View style={styles.sidebarHeader}>
-          <Text style={styles.brandTitle}>PodcastEditor</Text>
-          <Text style={styles.brandVersion}>v2.4.0</Text>
+          <Text style={[styles.brandTitle, { color: colors.primaryDark }]}>PodcastEditor</Text>
+          <Text style={[styles.brandVersion, { color: colors.primaryLight }]}>v2.4.0</Text>
         </View>
 
         <View style={styles.navGroup}>
-          {NAV_ITEMS.map((item) => (
-            <TouchableOpacity
-              key={item.route}
-              style={[styles.navItem, isActive(item.route) && styles.navItemActive]}
-              onPress={() => navigate(item.route)}
-            >
-              <View style={[styles.navIcon, isActive(item.route) && styles.navIconActive]}>
-                <Text style={[styles.navIconText, isActive(item.route) && styles.navIconTextActive]}>
-                  {item.icon}
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.route);
+            return (
+              <TouchableOpacity
+                key={item.route}
+                style={[
+                  styles.navItem,
+                  { borderLeftColor: 'transparent' },
+                  active && { backgroundColor: colors.sidebarActive, borderLeftColor: colors.sidebarActiveBorder },
+                ]}
+                onPress={() => navigate(item.route)}
+              >
+                <View style={[styles.navIcon, { backgroundColor: active ? colors.sidebarIconActiveBg : colors.sidebarIconBg }]}>
+                  <Text style={[styles.navIconText, { color: active ? colors.primaryDark : colors.primaryLight }]}>
+                    {item.icon}
+                  </Text>
+                </View>
+                <Text style={[styles.navItemText, { color: active ? colors.primaryDark : colors.textSecondary }, active && { fontWeight: '600' }]}>
+                  {item.label}
                 </Text>
-              </View>
-              <Text style={[styles.navItemText, isActive(item.route) && styles.navItemTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.spacer} />
 
         <View style={styles.profileSection}>
-          <View style={styles.avatarPlaceholder} />
+          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primaryMuted }]} />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Editor User</Text>
-            <Text style={styles.profileRole}>CONTENT EDITOR</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>Editor User</Text>
+            <Text style={[styles.profileRole, { color: colors.primaryLight }]}>CONTENT EDITOR</Text>
           </View>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>Exit</Text>
+            <Text style={{ color: colors.danger }}>Exit</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Main Content Area */}
-      <View style={styles.mainContent}>
-        <View style={styles.topbar}>
-          <Text style={styles.pageTitle}>Content Management</Text>
+      <View style={[styles.mainContent, { backgroundColor: colors.surface }]}>
+        <View style={[styles.topbar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.pageTitle, { color: colors.text }]}>Content Management</Text>
           <View style={styles.topbarRight}>
-            <View style={styles.searchBar}>
-              <Text style={styles.searchText}>Search podcasts or episodes...</Text>
+            <View style={[styles.searchBar, { backgroundColor: colors.searchBg, borderColor: colors.border }]}>
+              <Text style={{ color: colors.primaryMuted, fontSize: 14 }}>Search podcasts or episodes...</Text>
             </View>
-            <View style={styles.avatarPlaceholderSmall} />
+            {/* Theme Toggle */}
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[styles.themeToggle, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+            >
+              <Text style={{ fontSize: 16 }}>{isDark ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
+            <View style={[styles.avatarPlaceholderSmall, { backgroundColor: colors.primaryMuted }]} />
           </View>
         </View>
-        <View style={styles.contentArea}>
+        <View style={[styles.contentArea, { backgroundColor: colors.background }]}>
           <Slot />
         </View>
       </View>
     </View>
+  );
+}
+
+export default function EditorLayout() {
+  return (
+    <EditorThemeProvider>
+      <EditorLayoutInner />
+    </EditorThemeProvider>
   );
 }
 
@@ -161,18 +185,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAF5FF',
   },
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FAF5FF',
   },
   sidebar: {
     width: 260,
-    backgroundColor: '#FAF5FF',
     borderRightWidth: 1,
-    borderRightColor: '#E9D5FF',
     paddingVertical: 24,
     display: 'flex',
     flexDirection: 'column',
@@ -184,11 +204,9 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#6D28D9',
   },
   brandVersion: {
     fontSize: 12,
-    color: '#8B5CF6',
     marginTop: 4,
   },
   navGroup: {
@@ -202,12 +220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     marginBottom: 4,
-  },
-  navItemActive: {
-    backgroundColor: '#F3E8FF',
     borderLeftWidth: 3,
-    borderLeftColor: '#7C3AED',
-    borderRadius: 0,
     borderTopRightRadius: 6,
     borderBottomRightRadius: 6,
   },
@@ -215,39 +228,19 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 6,
-    backgroundColor: '#F3E8FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  navIconActive: {
-    backgroundColor: '#EDE9FE',
   },
   navIconText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8B5CF6',
-  },
-  navIconTextActive: {
-    color: '#6D28D9',
   },
   navItemText: {
     fontSize: 14,
-    color: '#6B7280',
     fontWeight: '500',
-  },
-  navItemTextActive: {
-    color: '#6D28D9',
-    fontWeight: '600',
   },
   spacer: {
     flex: 1,
-  },
-  footerNavGroup: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E9D5FF',
-    paddingTop: 16,
   },
   profileSection: {
     flexDirection: 'row',
@@ -259,7 +252,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#DDD6FE',
     marginRight: 12,
   },
   profileInfo: {
@@ -268,29 +260,21 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
   },
   profileRole: {
     fontSize: 10,
-    color: '#8B5CF6',
     marginTop: 2,
   },
   logoutBtn: {
     padding: 4,
   },
-  logoutText: {
-    fontSize: 12,
-    color: '#EF4444',
-  },
   mainContent: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     flexDirection: 'column',
   },
   topbar: {
     height: 72,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9D5FF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -299,7 +283,6 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
   },
   topbarRight: {
     flexDirection: 'row',
@@ -308,26 +291,26 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     borderWidth: 1,
-    borderColor: '#E9D5FF',
     borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
     width: 300,
-    backgroundColor: '#FFFFFF',
-  },
-  searchText: {
-    color: '#A78BFA',
-    fontSize: 14,
   },
   avatarPlaceholderSmall: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#DDD6FE',
   },
   contentArea: {
     flex: 1,
     padding: 32,
-    backgroundColor: '#FAFAF9',
+  },
+  themeToggle: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
 });

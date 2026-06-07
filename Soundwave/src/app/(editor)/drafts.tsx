@@ -4,6 +4,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useEditorTheme } from '@/contexts/EditorThemeContext';
+import { EditorThemeColors } from '@/constants/EditorTheme';
 
 type DraftEpisode = {
   id: string;
@@ -19,6 +21,7 @@ type DraftEpisode = {
 };
 
 export default function DraftsPage() {
+  const { colors } = useEditorTheme();
   const [drafts, setDrafts] = useState<DraftEpisode[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -107,10 +110,12 @@ export default function DraftsPage() {
     return `${mins} min`;
   };
 
+  const styles = makeStyles(colors);
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -170,7 +175,7 @@ export default function DraftsPage() {
                   disabled={actionLoading === draft.id}
                 >
                   {actionLoading === draft.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={colors.textInverse} />
                   ) : (
                     <Text style={styles.publishBtnText}>Publish</Text>
                   )}
@@ -191,45 +196,45 @@ export default function DraftsPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAF9' },
+const makeStyles = (colors: EditorThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   contentContainer: { gap: 12, paddingBottom: 40 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF9' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   header: {},
-  pageTitle: { fontSize: 24, fontWeight: '700', color: '#1F2937' },
-  pageSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
+  pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
   draftCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
-    padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border,
   },
   draftCardLeft: { flexDirection: 'row', flex: 1, gap: 12 },
   draftIcon: {
-    width: 40, height: 40, borderRadius: 8, backgroundColor: '#EDE9FE',
+    width: 40, height: 40, borderRadius: 8, backgroundColor: colors.sidebarIconActiveBg,
     justifyContent: 'center', alignItems: 'center',
   },
-  draftIconText: { fontSize: 16, fontWeight: '700', color: '#7C3AED' },
-  draftTitle: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
-  draftPodcast: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  draftIconText: { fontSize: 16, fontWeight: '700', color: colors.primary },
+  draftTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  draftPodcast: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   draftMeta: { flexDirection: 'row', gap: 12, marginTop: 4, flexWrap: 'wrap' },
-  metaItem: { fontSize: 11, color: '#9CA3AF' },
-  draftDesc: { fontSize: 12, color: '#6B7280', marginTop: 6, lineHeight: 18 },
+  metaItem: { fontSize: 11, color: colors.textMuted },
+  draftDesc: { fontSize: 12, color: colors.textSecondary, marginTop: 6, lineHeight: 18 },
   draftActions: { gap: 6, marginLeft: 12 },
   publishBtn: {
-    backgroundColor: '#7C3AED', paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: 4, minWidth: 70, alignItems: 'center',
   },
-  publishBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
+  publishBtnText: { color: colors.textInverse, fontWeight: '600', fontSize: 13 },
   deleteBtn: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4,
-    borderWidth: 1, borderColor: '#FCA5A5', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.danger, alignItems: 'center',
   },
-  deleteBtnText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
+  deleteBtnText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
   emptyState: {
     alignItems: 'center', paddingVertical: 60, gap: 12,
-    backgroundColor: '#F0FDF4', borderRadius: 8,
-    borderWidth: 1, borderColor: '#BBF7D0',
+    backgroundColor: colors.badgeSuccess, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.badgeSuccess,
   },
   emptyIcon: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#166534' },
-  emptyDesc: { fontSize: 14, color: '#166534', textAlign: 'center', maxWidth: 300 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.badgeSuccessText },
+  emptyDesc: { fontSize: 14, color: colors.badgeSuccessText, textAlign: 'center', maxWidth: 300 },
 });
