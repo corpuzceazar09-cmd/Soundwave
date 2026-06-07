@@ -294,5 +294,8 @@
       </div>
     </main>
   </div>
+<script>
+(function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var bold=i.querySelector('b'),cur=bold?parseInt(bold.textContent)||1:1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var m=parseInt(e.textContent.trim());if(!isNaN(m))e.classList.toggle('active',m===n)});if(bold)bold.textContent=n}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
 </body>
 </html>

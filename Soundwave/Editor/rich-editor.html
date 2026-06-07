@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rich Editor - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item active"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
+          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="breadcrumb-nav">
+          <a href="/episodes" class="breadcrumb-link">LAYOUT / EPISODES</a>
+          <span class="breadcrumb-sep">›</span>
+          <a href="#" class="breadcrumb-link">NEW EPISODE</a>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-secondary" style="font-size:0.8rem;padding:0.5rem 1rem"><i class="fa-regular fa-floppy-disk"></i> Save Draft</button>
+          <button class="btn-primary" style="font-size:0.8rem"><i class="fa-solid fa-upload"></i> Publish Episode</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          </div>
+        </div>
+      </header>
+
+      <div class="rich-editor-layout">
+        <!-- Left: Form -->
+        <div class="editor-form">
+          <div class="editor-section">
+            <label class="editor-label">EPISODE TITLE</label>
+            <input type="text" id="episodeTitle" class="form-control" placeholder="Enter a descriptive title..." style="padding:0.875rem 1rem">
+          </div>
+
+          <div class="editor-section">
+            <label class="editor-label">COVER IMAGE</label>
+            <div class="cover-upload" id="coverUpload">
+              <img id="coverPreview" src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop" alt="Cover">
+              <div class="cover-overlay">
+                <i class="fa-solid fa-camera"></i>
+                <span>Change Cover</span>
+              </div>
+              <input type="file" id="coverInput" accept="image/*" hidden>
+            </div>
+          </div>
+
+          <div class="editor-row-2">
+            <div class="editor-section">
+              <label class="editor-label">EPISODE NUMBER</label>
+              <input type="text" class="form-control" value="EP-142" style="padding:0.875rem 1rem">
+            </div>
+            <div class="editor-section">
+              <label class="editor-label">TAGS</label>
+              <div class="tags-input">
+                <span class="tag-chip tag-blue">Technology <i class="fa-solid fa-xmark"></i></span>
+                <span class="tag-chip tag-teal">AI Tools <i class="fa-solid fa-xmark"></i></span>
+                <input type="text" placeholder="Add tag..." class="tag-field" id="tagField">
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-section">
+            <label class="editor-label">EPISODE SUMMARY / SHOW NOTES</label>
+            <div class="editor-toolbar" id="editorToolbar">
+              <button class="toolbar-btn" data-cmd="bold" title="Bold (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
+              <button class="toolbar-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+              <button class="toolbar-btn" data-cmd="underline" title="Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
+              <button class="toolbar-btn" data-cmd="code" title="Code"><i class="fa-solid fa-code"></i></button>
+              <div class="toolbar-sep"></div>
+              <button class="toolbar-btn" data-cmd="link" title="Link"><i class="fa-solid fa-link"></i></button>
+              <button class="toolbar-btn" data-cmd="image" title="Image"><i class="fa-regular fa-image"></i></button>
+              <div class="toolbar-sep"></div>
+              <button class="toolbar-btn" data-cmd="undo" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+              <button class="toolbar-btn" data-cmd="redo" title="Redo (Ctrl+Shift+Z)"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div class="editor-textarea" id="richEditor" contenteditable="true" data-placeholder="Start writing the summary and show notes..."></div>
+          </div>
+
+          <div class="editor-row-2">
+            <div class="editor-section">
+              <label class="editor-label">COLLECTION AND ENCRYPT</label>
+              <div class="collection-selector">
+                <div class="cs-option cs-selected">
+                  <i class="fa-solid fa-star" style="color:#f59e0b"></i>
+                  <div>
+                    <div style="font-weight:600;font-size:0.875rem">Featured Episode</div>
+                    <div style="font-size:0.75rem;color:var(--text-gray)">Toggle on/off</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="editor-section">
+              <label class="editor-label">PUBLISH DATE</label>
+              <div class="input-wrapper">
+                <input type="text" class="form-control" value="Oct 24, 2023 — 06:03 AM" style="padding:0.875rem 1rem">
+                <i class="fa-regular fa-calendar" style="position:absolute;right:1rem;color:var(--text-gray)"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-label-row">
+              <label class="editor-label">HISTORY</label>
+              <span class="history-count">12 Total</span>
+            </div>
+            <div class="history-list">
+              <div class="history-item">
+                <div class="history-dot"></div>
+                <div class="history-body">
+                  <div class="history-label">DRAFT <span class="history-num">NEW_ITEM</span></div>
+                  <div class="history-info">
+                    <div class="history-title">Quantum Computing 101</div>
+                    <div class="history-date">Nov 7, 2023</div>
+                  </div>
+                </div>
+              </div>
+              <div class="history-item">
+                <div class="history-dot" style="background:var(--text-light)"></div>
+                <div class="history-body">
+                  <div class="history-label">EDIT</div>
+                  <div class="history-info">
+                    <div class="history-title">The Silicon Studio</div>
+                    <div class="history-date">Nov 7, 2023</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Preview -->
+        <div class="editor-preview">
+          <div class="preview-header">
+            <span class="preview-label"><i class="fa-solid fa-eye"></i> LIVE PREVIEW</span>
+          </div>
+          <div class="preview-card-large">
+            <div class="preview-img" id="previewImgWrap">
+              <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop" alt="Episode Preview" id="previewImg" style="width:100%;height:160px;object-fit:cover;border-radius:8px">
+            </div>
+            <div class="preview-meta">
+              <span class="badge badge-blue" style="margin-bottom:0.5rem"><span class="badge-dot"></span>PODCAST SHOW</span>
+              <div id="previewTitle" style="font-weight:700;font-size:1rem;margin-bottom:0.5rem">The Future of A Architecture</div>
+              <div id="previewDesc" style="font-size:0.8rem;color:var(--text-gray);margin-bottom:0.75rem">Exploring how AI is transforming voice synthesis and what it means for...</div>
+              <div style="font-size:0.75rem;color:var(--text-light)"><i class="fa-regular fa-thumbs-up"></i> 4.1k &nbsp; <i class="fa-regular fa-heart"></i> 4.1k</div>
+            </div>
+          </div>
+
+          <div class="preview-episode-list">
+            <div class="ep-list-item">
+              <div class="ep-num">14</div>
+              <div class="ep-info">
+                <div class="ep-title">Quantum Computing 101</div>
+                <div class="ep-date">Nov 7, 2023</div>
+              </div>
+            </div>
+            <div class="ep-list-item">
+              <div class="ep-num">13</div>
+              <div class="ep-info">
+                <div class="ep-title">The Silicon Studio</div>
+                <div class="ep-date">Nov 7, 2023</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<style>
+.editor-textarea[contenteditable="true"] {
+  outline: none;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+.editor-textarea[contenteditable="true"]:empty:before {
+  content: attr(data-placeholder);
+  color: var(--text-light);
+  pointer-events: none;
+}
+.editor-textarea[contenteditable="true"] code {
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: #e11d48;
+}
+.editor-textarea[contenteditable="true"] a {
+  color: var(--primary-blue);
+  text-decoration: underline;
+}
+.editor-textarea[contenteditable="true"] img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  display: block;
+}
+.toolbar-btn.active {
+  background: var(--primary-blue) !important;
+  color: white !important;
+}
+.cover-upload {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px dashed var(--border-color);
+  transition: border-color 0.2s;
+}
+.cover-upload:hover { border-color: var(--primary-blue); }
+.cover-upload img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  background: rgba(0,0,0,0.45);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.cover-upload:hover .cover-overlay { opacity: 1; }
+.cover-overlay i { font-size: 1.5rem; }
+</style>
+
+<style>
+.crop-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+}
+.crop-modal.open { display: flex; }
+.crop-modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.crop-modal-box h3 { margin-bottom: 1rem; }
+.crop-img-wrap {
+  flex: 1;
+  min-height: 300px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.crop-img-wrap img { max-width: 100%; }
+.crop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.crop-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+}
+.crop-zoom button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dark);
+  transition: all 0.15s;
+}
+.crop-zoom button:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+</style>
+
+<div class="crop-modal" id="cropModal">
+  <div class="crop-modal-box">
+    <h3>Adjust Cover Image</h3>
+    <div class="crop-img-wrap">
+      <img id="cropImage" src="" alt="Crop">
+    </div>
+    <div class="crop-actions">
+      <div class="crop-zoom">
+        <button id="zoomOutBtn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+        <span id="zoomLevel" style="font-size:0.8rem;color:var(--text-gray);min-width:3rem;text-align:center">100%</span>
+        <button id="zoomInBtn" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+      </div>
+      <button class="btn-secondary" id="cropCancel">Cancel</button>
+      <button class="btn-primary" id="cropApply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script>
+(function() {
+  const editor = document.getElementById('richEditor');
+  const toolbar = document.getElementById('editorToolbar');
+  const imageInput = document.createElement('input');
+  imageInput.type = 'file';
+  imageInput.accept = 'image/*';
+  imageInput.style.display = 'none';
+  document.body.appendChild(imageInput);
+  imageInput.addEventListener('change', function() {
+    const file = imageInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      exec('insertHTML', '<img src="' + e.target.result + '" alt="' + file.name + '" style="max-width:100%">');
+    };
+    reader.readAsDataURL(file);
+    imageInput.value = '';
+  });
+
+  function exec(cmd, val) {
+    editor.focus();
+    document.execCommand(cmd, false, val || null);
+    editor.focus();
+  }
+
+  toolbar.addEventListener('click', function(e) {
+    const btn = e.target.closest('.toolbar-btn');
+    if (!btn) return;
+    const cmd = btn.dataset.cmd;
+    switch (cmd) {
+      case 'bold': case 'italic': case 'underline':
+        exec(cmd);
+        break;
+      case 'code':
+        const sel = window.getSelection();
+        const text = sel.toString();
+        if (text) {
+          exec('insertHTML', '<code>' + escapeHtml(text) + '</code>');
+        } else {
+          exec('insertHTML', '<code>code</code>');
+        }
+        break;
+      case 'link':
+        const url = prompt('Enter link URL:', 'https://');
+        if (url) exec('createLink', url);
+        break;
+      case 'image':
+        imageInput.click();
+        break;
+      case 'undo':
+        exec('undo');
+        break;
+      case 'redo':
+        exec('redo');
+        break;
+    }
+  });
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escapeAttr(str) {
+    return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  const titleInput = document.getElementById('episodeTitle');
+  const previewTitle = document.getElementById('previewTitle');
+  const previewDesc = document.getElementById('previewDesc');
+  const previewImg = document.getElementById('previewImg');
+  const coverUpload = document.getElementById('coverUpload');
+  const coverInput = document.getElementById('coverInput');
+  const coverPreview = document.getElementById('coverPreview');
+
+  var cropper = null;
+  var cropModal = document.getElementById('cropModal');
+  var cropImage = document.getElementById('cropImage');
+
+  coverUpload.addEventListener('click', function() { coverInput.click(); });
+  coverInput.addEventListener('change', function() {
+    var file = coverInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      cropImage.src = e.target.result;
+      cropModal.classList.add('open');
+      if (cropper) cropper.destroy();
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 16 / 9,
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 1,
+        zoomable: true,
+        scalable: false,
+      });
+    };
+    reader.readAsDataURL(file);
+    coverInput.value = '';
+  });
+
+  document.getElementById('cropCancel').addEventListener('click', function() {
+    cropModal.classList.remove('open');
+    if (cropper) { cropper.destroy(); cropper = null; }
+  });
+
+  document.getElementById('cropApply').addEventListener('click', function() {
+    if (!cropper) return;
+    var canvas = cropper.getCroppedCanvas({ width: 800 });
+    var dataUrl = canvas.toDataURL('image/jpeg');
+    coverPreview.src = dataUrl;
+    previewImg.src = dataUrl;
+    coverSet = true;
+    cropModal.classList.remove('open');
+    cropper.destroy();
+    cropper = null;
+  });
+
+  document.getElementById('zoomInBtn').addEventListener('click', function() {
+    if (cropper) cropper.zoom(0.1);
+  });
+  document.getElementById('zoomOutBtn').addEventListener('click', function() {
+    if (cropper) cropper.zoom(-0.1);
+  });
+
+  var coverSet = false;
+  coverInput.addEventListener('change', function() { coverSet = true; });
+
+  function updatePreview() {
+    previewTitle.textContent = titleInput.value.trim() || 'Untitled Episode';
+    var clone = editor.cloneNode(true);
+    var imgs = clone.querySelectorAll('img');
+    if (imgs.length && !coverSet) {
+      previewImg.src = imgs[0].src;
+    }
+    imgs.forEach(function(img) { img.remove(); });
+    var html = clone.innerHTML;
+    previewDesc.innerHTML = html || 'Start writing the summary and show notes...';
+  }
+
+  titleInput.addEventListener('input', updatePreview);
+  editor.addEventListener('input', updatePreview);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && ['b','i','u'].includes(e.key)) {
+      const map = { b: 'bold', i: 'italic', u: 'underline' };
+      const btn = toolbar.querySelector('[data-cmd="' + map[e.key] + '"]');
+      if (btn) btn.classList.add('active');
+      setTimeout(function() { btn.classList.remove('active'); }, 200);
+    }
+    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      exec('undo');
+    }
+    if (e.ctrlKey && e.key === 'z' && e.shiftKey) {
+      e.preventDefault();
+      exec('redo');
+    }
+  });
+
+  function updateToolbar() {
+    const btns = toolbar.querySelectorAll('.toolbar-btn[data-cmd]');
+    btns.forEach(function(btn) {
+      const cmd = btn.dataset.cmd;
+      if (['bold','italic','underline'].includes(cmd)) {
+        try {
+          btn.classList.toggle('active', document.queryCommandState(cmd));
+        } catch(e) {}
+      }
+    });
+  }
+  editor.addEventListener('mouseup', updateToolbar);
+  editor.addEventListener('keyup', updateToolbar);
+
+  const tagField = document.getElementById('tagField');
+  tagField.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const text = this.value.trim();
+      if (!text) return;
+      const colors = ['tag-blue', 'tag-teal', 'tag-orange', 'tag-purple'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip ' + color;
+      chip.innerHTML = escapeHtml(text) + ' <i class="fa-solid fa-xmark"></i>';
+      chip.querySelector('i').addEventListener('click', function() { chip.remove(); });
+      this.parentElement.insertBefore(chip, this);
+      this.value = '';
+    }
+  });
+
+  document.querySelectorAll('.tag-chip i').forEach(function(icon) {
+    icon.addEventListener('click', function() { this.parentElement.remove(); });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Episodes - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item active"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
+          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" placeholder="Search episodes, genre, or tags...">
+        </div>
+        <div class="topbar-actions">
+          <button class="filter-pill">All Status <i class="fa-solid fa-chevron-down"></i></button>
+          <button class="filter-pill">All Collections <i class="fa-solid fa-chevron-down"></i></button>
+          <button class="export-btn">Export CSV</button>
+          <button class="btn-primary" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Breadcrumb -->
+        <div style="font-size:0.75rem;color:var(--text-gray);margin-bottom:0.5rem">
+          PODCASTS &rsaquo; <span style="color:var(--text-dark);font-weight:500">THE AI SAMPLING</span>
+        </div>
+
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Episode Management</h2>
+            <p class="page-subtitle">Managing 49 episodes across 4 categories</p>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:center">
+            <button class="btn-secondary"><i class="fa-solid fa-sliders"></i> Advanced Filters</button>
+            <button class="btn-primary" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
+          </div>
+        </div>
+
+        <!-- Episode Stats -->
+        <div class="ep-stats-row">
+          <div class="ep-stat">
+            <div class="ep-stat-label">TOTAL EPISODES</div>
+            <div class="ep-stat-val">49</div>
+            <div class="ep-stat-sub" style="color:var(--text-gray)">Total Episodes</div>
+          </div>
+          <div class="ep-stat" style="border-left:1px solid var(--border-color);padding-left:1.5rem">
+            <div class="ep-stat-label">PUBLISHED</div>
+            <div class="ep-stat-val">42 <span style="font-size:1rem;color:var(--success-text)">▲15%</span></div>
+            <div class="ep-stat-sub change-green">Total Active</div>
+          </div>
+          <div class="ep-stat" style="border-left:1px solid var(--border-color);padding-left:1.5rem">
+            <div class="ep-stat-label">LISTENING TIME AVG</div>
+            <div class="ep-stat-val">24m 12s</div>
+            <div class="ep-stat-sub"><span class="badge badge-blue" style="font-size:0.7rem">+2% vs 3 mo avg</span></div>
+          </div>
+          <div class="ep-stat-chart" style="margin-left:auto">
+            <!-- Mini bar chart simulation -->
+            <div class="mini-bars">
+              <div class="mini-bar" style="height:30%"></div>
+              <div class="mini-bar" style="height:50%"></div>
+              <div class="mini-bar" style="height:40%"></div>
+              <div class="mini-bar" style="height:70%"></div>
+              <div class="mini-bar" style="height:60%"></div>
+              <div class="mini-bar active-bar" style="height:90%"></div>
+              <div class="mini-bar" style="height:65%"></div>
+            </div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox"></th>
+              <th>Title &amp; Guest</th>
+              <th>Duration</th>
+              <th>Publish Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td>
+                <div class="ep-row-info">
+                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
+                  <div>
+                    <div class="podcast-title">The Future of Generative AI</div>
+                    <div class="podcast-publisher">with Jason Lernow</div>
+                  </div>
+                </div>
+              </td>
+              <td>42:15</td>
+              <td>Oct 24, 2023</td>
+              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
+              <td>
+                <div style="display:flex;gap:0.5rem">
+                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td>
+                <div class="ep-row-info">
+                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
+                  <div>
+                    <div class="podcast-title">Deep Dive: Data Residency</div>
+                    <div class="podcast-publisher">with Marcus Farm</div>
+                  </div>
+                </div>
+              </td>
+              <td>38:42</td>
+              <td>Oct 12, 2023</td>
+              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
+              <td>
+                <div style="display:flex;gap:0.5rem">
+                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td>
+                <div class="ep-row-info">
+                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
+                  <div>
+                    <div class="podcast-title">Scaling Content Operations</div>
+                    <div class="podcast-publisher">MPI S. Keamy Liu</div>
+                  </div>
+                </div>
+              </td>
+              <td>54:30</td>
+              <td>Scheduled Oct 27</td>
+              <td><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label> Hidden</td>
+              <td>
+                <div style="display:flex;gap:0.5rem">
+                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td>
+                <div class="ep-row-info">
+                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
+                  <div>
+                    <div class="podcast-title">The Ethics of AI Narrative</div>
+                    <div class="podcast-publisher">MPI D. Keamy Liu</div>
+                  </div>
+                </div>
+              </td>
+              <td>28:48</td>
+              <td>Oct 18, 2023</td>
+              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
+              <td>
+                <div style="display:flex;gap:0.5rem">
+                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination">
+          <div class="page-info">Showing 1–4 of 49 episodes</div>
+          <div class="page-controls">
+            <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+<script>
+(function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/)||i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/);if(!m)return;var tot=parseInt(m[3]),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
+</body>
+</html>

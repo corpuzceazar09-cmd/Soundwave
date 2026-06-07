@@ -12,8 +12,9 @@ async function connectToDatabase() {
     const db = client.db('soundwave_editor');
     return db;
   } catch (error) {
-    console.error("❌ Failed to connect to MongoDB", error);
-    process.exit(1);
+    console.error("❌ Failed to connect to MongoDB:", error.message);
+    console.log("⚠️ Starting server without DB connection. Server will run with limited functionality.");
+    return null;
   }
 }
 

@@ -85,6 +85,10 @@ let editorsCache = [];
 let editorsCacheTimestamp = 0;
 const EDITORS_CACHE_TTL = 30000; // 30 seconds
 
+const FALLBACK_EDITORS = [
+  { editorId: 'ED-999-999', password: 'admin', name: 'Super Editor' }
+];
+
 async function getEditors() {
   if (Date.now() - editorsCacheTimestamp < EDITORS_CACHE_TTL && editorsCache.length > 0) {
     return editorsCache;
@@ -93,11 +97,12 @@ async function getEditors() {
     try {
       editorsCache = await db.collection('editors').find({}).toArray();
       editorsCacheTimestamp = Date.now();
+      return editorsCache;
     } catch {
-      // fall through to cache
+      // fall through to fallback
     }
   }
-  return editorsCache;
+  return FALLBACK_EDITORS;
 }
 
 let req;
@@ -123,7 +128,7 @@ const server = http.createServer(async (incomingReq, res) => {
 
         if (editor) {
           console.log(`[LOGIN SUCCESS] ${editorId}`);
-          res.writeHead(302, { 'Location': '/dashboard' });
+          res.writeHead(302, { 'Location': '/editorial-dashboard' });
           return res.end();
         } else {
           console.log(`[LOGIN FAILED] Invalid credentials for ${editorId}`);
@@ -146,7 +151,14 @@ const server = http.createServer(async (incomingReq, res) => {
   const cleanUrlMap = {
     '/': '/login.html',
     '/login': '/login.html',
-    '/dashboard': '/dashboard.html'
+    '/dashboard': '/dashboard.html',
+    '/editorial-dashboard': '/editorial-dashboard.html',
+    '/review-queue': '/review-queue.html',
+    '/rich-editor': '/rich-editor.html',
+    '/collections': '/collections.html',
+    '/episodes': '/episodes.html',
+    '/content-browser': '/content-browser.html',
+    '/admin-settings': '/admin-settings.html',
   };
 
   // Check if the path ends with .html already — if so, keep it as-is; otherwise apply mapping

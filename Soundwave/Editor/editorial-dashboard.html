@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editorial Dashboard - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item active"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Settings</a>
+          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>Help Center</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" placeholder="Search across dashboard...">
+        </div>
+        <div class="topbar-actions">
+          <button class="export-btn">EXPORT CSV</button>
+          <button class="btn-primary">Publish Changes</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem;color:var(--text-gray)"></i>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header" style="margin-bottom:1.5rem">
+          <div>
+            <h2 class="page-title">Editorial Dashboard</h2>
+            <p class="page-subtitle">Overview of editorial activity and performance metrics.</p>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="dash-metrics">
+          <div class="metric-card metric-blue">
+            <div class="metric-top">
+              <span class="metric-label">PENDING REVIEWS</span>
+              <i class="fa-solid fa-list-check metric-icon"></i>
+            </div>
+            <div class="metric-value">42</div>
+            <div class="metric-sub change-red">+8 vs last week</div>
+          </div>
+          <div class="metric-card metric-teal">
+            <div class="metric-top">
+              <span class="metric-label">DRAFTS IN PROGRESS</span>
+              <i class="fa-solid fa-pen metric-icon"></i>
+            </div>
+            <div class="metric-value">128</div>
+            <div class="metric-sub change-blue">+14% vs last week</div>
+          </div>
+          <div class="metric-card metric-indigo">
+            <div class="metric-top">
+              <span class="metric-label">PUBLISHED THIS YEAR</span>
+              <i class="fa-solid fa-globe metric-icon"></i>
+            </div>
+            <div class="metric-value">1,402</div>
+            <div class="metric-sub change-blue">+128 Deploy discrepancy</div>
+          </div>
+        </div>
+
+        <!-- Two-column layout -->
+        <div class="dash-two-col">
+          <!-- Review Priorities -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <span class="dash-panel-title">Review Priorities</span>
+              <a href="/review-queue" class="dash-panel-link">View Full Queue →</a>
+            </div>
+            <table class="data-table" style="margin-bottom:0">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Episode Title</th>
+                  <th>Author</th>
+                  <th>Priority</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>
+                    <div class="podcast-title">The Future of AI Audits</div>
+                    <div class="podcast-publisher">Machine Episode #4</div>
+                  </td>
+                  <td>James Weser</td>
+                  <td><span class="badge badge-red"><span class="badge-dot"></span>LATEST</span></td>
+                  <td><button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>
+                    <div class="podcast-title">Navigating Remote Work</div>
+                    <div class="podcast-publisher">WorkLife Series</div>
+                  </td>
+                  <td>Sarah Chan</td>
+                  <td><span class="badge badge-yellow"><span class="badge-dot"></span>MEDIUM</span></td>
+                  <td><button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <span class="dash-panel-title">Recent Activity</span>
+              <a href="#" class="dash-panel-link">Show More Activity →</a>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-dot dot-blue"></div>
+                <div class="activity-body">
+                  <div class="activity-text">System approved <strong>"Spotify R..."</strong></div>
+                  <div class="activity-time">15:21 Today</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-orange"></div>
+                <div class="activity-body">
+                  <div class="activity-text">Sam Chen AI adjustment — <em>"Verify also u approved, a..</em></div>
+                  <div class="activity-time">14:42 Today</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot dot-green"></div>
+                <div class="activity-body">
+                  <div class="activity-text">BM flagged error in <strong>"Finance"</strong></div>
+                  <div class="activity-time">12:05 Today</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Performing Episodes -->
+        <div class="dash-panel" style="margin-top:1.5rem">
+          <div class="dash-panel-header">
+            <span class="dash-panel-title">Top Performing Episodes</span>
+            <span class="dash-panel-sub">Last 14 Days</span>
+          </div>
+          <div class="top-episodes">
+            <div class="top-ep-card" onclick="window.location='/rich-editor'" style="cursor:pointer">
+              <div class="top-ep-thumb" style="background:linear-gradient(135deg,#1e293b,#0f172a)">
+                <i class="fa-solid fa-robot" style="color:#38bdf8;font-size:1.5rem"></i>
+              </div>
+              <div class="top-ep-body">
+                <div class="top-ep-title">AI Revolution Pt 1</div>
+                <div class="top-ep-meta">91.2k views · +742 Issues</div>
+              </div>
+            </div>
+            <div class="top-ep-card" onclick="window.location='/rich-editor'" style="cursor:pointer">
+              <div class="top-ep-thumb" style="background:linear-gradient(135deg,#312e81,#1e1b4b)">
+                <i class="fa-solid fa-building" style="color:#a5b4fc;font-size:1.5rem"></i>
+              </div>
+              <div class="top-ep-body">
+                <div class="top-ep-title">Mindset of Builders</div>
+                <div class="top-ep-meta">39.8k views · +621 Issues</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Nav active state
+    document.querySelectorAll('.nav-item').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

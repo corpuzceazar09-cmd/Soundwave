@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collections Manager - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item active"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
+          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" placeholder="Search collections...">
+        </div>
+        <div class="topbar-actions">
+          <button class="export-btn">EXPORT CSV</button>
+          <button class="btn-primary">Publish Changes</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Collections Manager</h2>
+            <p class="page-subtitle">Curate and manage thematic podcast lists for distributors.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="view-btn-icon active"><i class="fa-solid fa-table-cells-large"></i></button>
+            <button class="view-btn-icon"><i class="fa-solid fa-list"></i></button>
+          </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="collections-stats-row">
+          <div class="cstat">
+            <div class="cstat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-layer-group"></i></div>
+            <div>
+              <div class="cstat-val">42</div>
+              <div class="cstat-label">TOTAL COLLECTIONS <span class="change-blue">↑ 3 this month</span></div>
+            </div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div>
+            <div>
+              <div class="cstat-val">1,284</div>
+              <div class="cstat-label">ACTIVE PODCASTS <span style="color:var(--text-gray)">Across all collections</span></div>
+            </div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-chart-bar"></i></div>
+            <div>
+              <div class="cstat-val">4.2/day</div>
+              <div class="cstat-label">CONTENT VELOCITY <span style="color:var(--text-gray)">Avg update frequency</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collection Grid -->
+        <div class="collections-grid">
+          <div class="collection-card" onclick="alert('Collection: Best of 2023')">
+            <div class="cc-thumb">
+              <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop" alt="Best of 2023">
+              <span class="cc-badge">EPIC</span>
+            </div>
+            <div class="cc-body">
+              <div class="cc-header">
+                <span class="cc-title">Best of 2023</span>
+                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+              </div>
+              <p class="cc-desc">A strong collection to respect top of the most impactful you've said right...</p>
+              <div class="cc-footer">
+                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 108 Podcasts</span>
+                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated 19 ago</span>
+              </div>
+              <div class="cc-actions">
+                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
+                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
+                <a href="#" class="cc-manage">Manage →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="collection-card" onclick="alert('Collection: Tech Deep Dives')">
+            <div class="cc-thumb">
+              <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&h=150&fit=crop" alt="Tech Deep Dives">
+            </div>
+            <div class="cc-body">
+              <div class="cc-header">
+                <span class="cc-title">Tech Deep Dives</span>
+                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+              </div>
+              <p class="cc-desc">Exploration of emerging technologies, AI, development, and cybersecurity insights...</p>
+              <div class="cc-footer">
+                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 56 Podcasts</span>
+                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated Dec 12</span>
+              </div>
+              <div class="cc-actions">
+                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
+                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
+                <a href="#" class="cc-manage">Manage →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create New Card -->
+          <div class="collection-card collection-card-new" onclick="alert('Create new collection')">
+            <div class="cc-new-content">
+              <div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div>
+              <div class="cc-new-title">Create New Collection</div>
+              <div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div>
+            </div>
+          </div>
+
+          <div class="collection-card" onclick="alert('Collection: Business Strategy')">
+            <div class="cc-thumb">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=150&fit=crop" alt="Business Strategy">
+            </div>
+            <div class="cc-body">
+              <div class="cc-header">
+                <span class="cc-title">Business Strategy</span>
+                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+              </div>
+              <p class="cc-desc">High-impact business strategy, market analysis, operational excellence framework...</p>
+              <div class="cc-footer">
+                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 214 Podcasts</span>
+                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated Yesterday</span>
+              </div>
+              <div class="cc-actions">
+                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
+                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
+                <a href="#" class="cc-manage">Manage →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="collection-card" onclick="alert('Collection: Daily Briefing')">
+            <div class="cc-thumb">
+              <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=300&h=150&fit=crop" alt="Daily Briefing">
+            </div>
+            <div class="cc-body">
+              <div class="cc-header">
+                <span class="cc-title">Daily Briefing</span>
+                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+              </div>
+              <p class="cc-desc">Consolidated short-form news, updates and essential morning briefings...</p>
+              <div class="cc-footer">
+                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 96 Podcasts</span>
+                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated 5hrs ago</span>
+              </div>
+              <div class="cc-actions">
+                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
+                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
+                <a href="#" class="cc-manage">Manage →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pagination" style="margin-top:1.5rem">
+          <div class="page-info">Showing 1–5 of 42 collections</div>
+          <div class="page-controls">
+            <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <div class="system-toast"><i class="fa-solid fa-rotate"></i> System syncing 12 active streams...</div>
+      </div>
+    </main>
+  </div>
+<script>
+(function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/);if(!m)return;var tot=parseInt(m[3]),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
+</body>
+</html>

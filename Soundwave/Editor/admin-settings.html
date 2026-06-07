@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Settings - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item active"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
+          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" placeholder="Search settings, users, categories...">
+        </div>
+        <div class="topbar-actions">
+          <button class="export-btn">EXPORT CSV</button>
+          <button class="btn-primary">Publish Changes</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Editor Settings</h2>
+            <p class="page-subtitle">Configure system-wide parameters, manage editorial roles, and refine notification logic.</p>
+          </div>
+        </div>
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+          <button class="settings-tab active" data-tab="categories">GLOBAL CATEGORIES</button>
+          <button class="settings-tab" data-tab="accounts">EDITOR ACCOUNTS</button>
+          <button class="settings-tab" data-tab="notifications">NOTIFICATION PREFERENCES</button>
+        </div>
+
+        <!-- Tab: Global Categories -->
+        <div id="tab-categories" class="settings-tab-body">
+          <div class="settings-section-header">
+            <div>
+              <h3 class="settings-section-title">Taxonomy Management</h3>
+              <p class="settings-section-sub">Manage the taxonomy used across all topics in the editors.</p>
+            </div>
+            <button class="btn-primary"><i class="fa-solid fa-plus"></i> ADD CATEGORY</button>
+          </div>
+
+          <div class="taxonomy-grid">
+            <div class="taxonomy-card">
+              <div class="taxonomy-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-microchip"></i></div>
+              <div class="taxonomy-body">
+                <div class="taxonomy-title">Tech &amp; Innovation</div>
+                <div class="taxonomy-desc">Covering AI, hardware, and software development cycles.</div>
+              </div>
+              <div class="taxonomy-actions">
+                <span class="badge badge-blue"><span class="badge-dot"></span>ESTABLISHED</span>
+                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
+                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
+              </div>
+            </div>
+
+            <div class="taxonomy-card">
+              <div class="taxonomy-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-landmark"></i></div>
+              <div class="taxonomy-body">
+                <div class="taxonomy-title">Global Finance</div>
+                <div class="taxonomy-desc">Market analytics, crypto history, and investment strategy.</div>
+              </div>
+              <div class="taxonomy-actions">
+                <span class="badge badge-blue"><span class="badge-dot"></span>ESTABLISHED</span>
+                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
+                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
+              </div>
+            </div>
+
+            <div class="taxonomy-card">
+              <div class="taxonomy-icon" style="background:#fce7f3;color:#db2777"><i class="fa-solid fa-palette"></i></div>
+              <div class="taxonomy-body">
+                <div class="taxonomy-title">Culture &amp; Arts</div>
+                <div class="taxonomy-desc">Intersections of culture, art series, creativity, and art in the wellness zone.</div>
+              </div>
+              <div class="taxonomy-actions">
+                <span class="badge badge-yellow"><span class="badge-dot"></span>MANAGED</span>
+                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
+                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-footer">
+            <button class="btn-secondary">DISCARD CHANGES</button>
+            <button class="btn-primary" style="padding:0.75rem 2rem">SAVE GLOBAL SETTINGS</button>
+          </div>
+        </div>
+
+        <!-- Tab: Editor Accounts (hidden by default) -->
+        <div id="tab-accounts" class="settings-tab-body" style="display:none">
+          <div class="settings-section-header">
+            <div>
+              <h3 class="settings-section-title">Editor Accounts</h3>
+              <p class="settings-section-sub">Manage editor user accounts and permissions.</p>
+            </div>
+            <button class="btn-primary"><i class="fa-solid fa-plus"></i> ADD EDITOR</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Editor ID</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family:monospace">ED-001-001</td>
+                <td>James Weser</td>
+                <td><span class="badge badge-blue">Senior Editor</span></td>
+                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
+                <td><button class="btn-icon"><i class="fa-solid fa-pen"></i></button></td>
+              </tr>
+              <tr>
+                <td style="font-family:monospace">ED-002-004</td>
+                <td>Sarah Chan</td>
+                <td><span class="badge badge-gray">Editor</span></td>
+                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
+                <td><button class="btn-icon"><i class="fa-solid fa-pen"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab: Notification Preferences (hidden by default) -->
+        <div id="tab-notifications" class="settings-tab-body" style="display:none">
+          <div class="settings-section-header">
+            <div>
+              <h3 class="settings-section-title">Notification Preferences</h3>
+              <p class="settings-section-sub">Control when and how the system sends editorial alerts.</p>
+            </div>
+          </div>
+          <div class="notif-prefs">
+            <div class="notif-pref-row">
+              <div>
+                <div style="font-weight:600">New RSS Ingest</div>
+                <div style="font-size:0.8rem;color:var(--text-gray)">Notify when a new feed is ingested</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="notif-pref-row">
+              <div>
+                <div style="font-weight:600">Review Completed</div>
+                <div style="font-size:0.8rem;color:var(--text-gray)">Alert when a queue item is approved</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="notif-pref-row">
+              <div>
+                <div style="font-weight:600">Failed Publish</div>
+                <div style="font-size:0.8rem;color:var(--text-gray)">Alert on failed episode publishing</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+          <div class="settings-footer">
+            <button class="btn-secondary">DISCARD CHANGES</button>
+            <button class="btn-primary" style="padding:0.75rem 2rem">SAVE PREFERENCES</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.settings-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        tabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.settings-tab-body').forEach(b => b.style.display = 'none');
+        document.getElementById('tab-' + this.dataset.tab).style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>
