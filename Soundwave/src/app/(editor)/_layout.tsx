@@ -1,10 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Slot, useRouter } from 'expo-router';
+import { Slot, useRouter, usePathname } from 'expo-router';
 import { useAuth, isMockMode } from '@/lib/auth';
+
+type NavItem = {
+  label: string;
+  route: string;
+  icon: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', route: '/(editor)', icon: 'D' },
+  { label: 'Podcasts', route: '/(editor)/podcasts', icon: 'P' },
+  { label: 'Episodes', route: '/(editor)/episodes', icon: 'E' },
+  { label: 'Drafts', route: '/(editor)/drafts', icon: '!' },
+];
 
 export default function EditorLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { role, loading, signOut } = useAuth();
   const [checking, setChecking] = useState(true);
   const [timedOut, setTimedOut] = useState(false);
@@ -38,6 +52,15 @@ export default function EditorLayout() {
       setChecking(false);
     }
   }, [loading, role]);
+
+  const navigate = (route: string) => {
+    router.push(route as any);
+  };
+
+  const isActive = (route: string) => {
+    if (route === '/(editor)') return pathname === '/(editor)';
+    return pathname.startsWith(route);
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -82,45 +105,25 @@ export default function EditorLayout() {
         </View>
 
         <View style={styles.navGroup}>
-          <TouchableOpacity
-            style={[styles.navItem, styles.navItemActive]}
-            onPress={() => router.push('/(editor)' as any)}
-          >
-            <Text style={[styles.navItemText, styles.navItemTextActive]}>My Content</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push('/(editor)' as any)}
-          >
-            <Text style={styles.navItemText}>Podcasts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push('/(editor)' as any)}
-          >
-            <Text style={styles.navItemText}>Episodes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push('/(editor)' as any)}
-          >
-            <Text style={styles.navItemText}>Drafts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push('/(editor)' as any)}
-          >
-            <Text style={styles.navItemText}>Media Library</Text>
-          </TouchableOpacity>
+          {NAV_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.route}
+              style={[styles.navItem, isActive(item.route) && styles.navItemActive]}
+              onPress={() => navigate(item.route)}
+            >
+              <View style={[styles.navIcon, isActive(item.route) && styles.navIconActive]}>
+                <Text style={[styles.navIconText, isActive(item.route) && styles.navIconTextActive]}>
+                  {item.icon}
+                </Text>
+              </View>
+              <Text style={[styles.navItemText, isActive(item.route) && styles.navItemTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.spacer} />
-
-        <View style={styles.footerNavGroup}>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navItemText}>Help</Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.profileSection}>
           <View style={styles.avatarPlaceholder} />
@@ -192,6 +195,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -204,6 +210,25 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderTopRightRadius: 6,
     borderBottomRightRadius: 6,
+  },
+  navIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navIconActive: {
+    backgroundColor: '#EDE9FE',
+  },
+  navIconText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+  navIconTextActive: {
+    color: '#6D28D9',
   },
   navItemText: {
     fontSize: 14,

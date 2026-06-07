@@ -1,175 +1,257 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
-const MOCK_PODCASTS = [
-  { id: 1, title: 'The Tech Daily', episodes: 142, status: 'Published', lastEdit: 'Oct 24, 2024' },
-  { id: 2, title: 'Global Markets Weekly', episodes: 89, status: 'Draft', lastEdit: 'Oct 23, 2024' },
-  { id: 3, title: 'Crime Chronicles', episodes: 56, status: 'Published', lastEdit: 'Oct 22, 2024' },
-  { id: 4, title: 'Science Now', episodes: 12, status: 'Review', lastEdit: 'Oct 21, 2024' },
-];
+type PodcastWithCount = {
+  id: string;
+  title: string;
+  author: string | null;
+  featured: boolean;
+  episode_count: number;
+  latest_episode: string | null;
+};
+
+type DashboardStats = {
+  totalPodcasts: number;
+  totalEpisodes: number;
+  draftEpisodes: number;
+  publishedEpisodes: number;
+};
 
 export default function EditorDashboard() {
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPodcasts: 0, totalEpisodes: 0, draftEpisodes: 0, publishedEpisodes: 0,
+  });
+  const [podcasts, setPodcasts] = useState<PodcastWithCount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [podcastsRes, episodesRes, draftsRes, publishedRes, podcastsFull] = await Promise.all([
+        supabase.from('podcasts').select('id', { count: 'exact', head: true }),
+        supabase.from('episodes').select('id', { count: 'exact', head: true }),
+        supabase.from('episodes').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+        supabase.from('episodes').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+        supabase.from('podcasts').select('id, title, author, featured, created_at').order('created_at', { ascending: false }).limit(50),
+      ]);
+
+      const totalPodcasts = podcastsRes.count ?? 0;
+      const totalEpisodes = episodesRes.count ?? 0;
+      const draftEpisodes = draftsRes.count ?? 0;
+      const publishedEpisodes = publishedRes.count ?? 0;
+
+      // Get episode counts per podcast
+      const podcastIds = (podcastsFull.data ?? []).map(p => p.id);
+      let episodeCounts: Record<string, { count: number; latest: string | null }> = {};
+
+      if (podcastIds.length > 0) {
+        const { data: counts } = await supabase
+          .from('episodes')
+          .select('podcast_id, created_at')
+          .in('podcast_id', podcastIds)
+          .order('created_at', { ascending: false });
+
+        if (counts) {
+          const seen = new Set<string>();
+          counts.forEach(ep => {
+            if (!episodeCounts[ep.podcast_id]) {
+              episodeCounts[ep.podcast_id] = { count: 0, latest: null };
+            }
+            episodeCounts[ep.podcast_id].count++;
+            if (!seen.has(ep.podcast_id)) {
+              episodeCounts[ep.podcast_id].latest = ep.created_at;
+              seen.add(ep.podcast_id);
+            }
+          });
+        }
+      }
+
+      setStats({ totalPodcasts, totalEpisodes, draftEpisodes, publishedEpisodes });
+      setPodcasts(
+        (podcastsFull.data ?? []).map(p => ({
+          id: p.id,
+          title: p.title,
+          author: p.author,
+          featured: p.featured,
+          episode_count: episodeCounts[p.id]?.count ?? 0,
+          latest_episode: episodeCounts[p.id]?.latest ?? null,
+        }))
+      );
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => { fetchData(); }, [fetchData])
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Stats Row */}
+      {/* Stats Cards */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statTitle}>MY PODCASTS</Text>
-          <Text style={styles.statValue}>4</Text>
-          <Text style={styles.statSubtitle}>Assigned to you</Text>
+          <Text style={styles.statTitle}>TOTAL PODCASTS</Text>
+          <Text style={styles.statValue}>{stats.totalPodcasts}</Text>
+          <Text style={styles.statSubtext}>In the directory</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statTitle}>TOTAL EPISODES</Text>
-          <Text style={styles.statValue}>299</Text>
-          <Text style={styles.statSubtitle}>Across all podcasts</Text>
+          <Text style={styles.statValue}>{stats.totalEpisodes}</Text>
+          <Text style={styles.statSubtext}>Across all podcasts</Text>
         </View>
-        <View style={[styles.statCard, styles.statCardWarning]}>
-          <Text style={[styles.statTitle, { color: '#D97706' }]}>PENDING REVIEW</Text>
-          <Text style={[styles.statValue, { color: '#D97706' }]}>3</Text>
-          <Text style={styles.statSubtitle}>Needs approval</Text>
+        <View style={[styles.statCard, stats.draftEpisodes > 0 && styles.statCardWarning]}>
+          <Text style={[styles.statTitle, stats.draftEpisodes > 0 && { color: '#D97706' }]}>
+            DRAFTS
+          </Text>
+          <Text style={[styles.statValue, stats.draftEpisodes > 0 && { color: '#D97706' }]}>
+            {stats.draftEpisodes}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/(editor)/drafts' as any)}>
+            <Text style={[styles.statSubtext, { color: '#7C3AED', textDecorationLine: 'underline' }]}>
+              {stats.draftEpisodes > 0 ? 'Needs review →' : 'No pending drafts'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statTitle}>DRAFTS</Text>
-          <Text style={styles.statValue}>7</Text>
-          <Text style={styles.statSubtitle}>In progress</Text>
+          <Text style={styles.statTitle}>PUBLISHED</Text>
+          <Text style={styles.statValue}>{stats.publishedEpisodes}</Text>
+          <Text style={styles.statSubtext}>Live episodes</Text>
         </View>
       </View>
 
-      {/* My Podcasts */}
+      {/* Podcast List */}
       <View style={styles.tableSection}>
         <View style={styles.tableHeader}>
-          <Text style={styles.sectionTitle}>My Podcasts</Text>
-          <TouchableOpacity style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+ New Episode</Text>
+          <Text style={styles.sectionTitle}>Podcasts</Text>
+          <TouchableOpacity
+            style={styles.viewAllBtn}
+            onPress={() => router.push('/(editor)/podcasts' as any)}
+          >
+            <Text style={styles.viewAllBtnText}>Manage Podcasts →</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.table}>
-          <View style={styles.tableHead}>
-            <Text style={[styles.th, { flex: 2.5 }]}>TITLE</Text>
-            <Text style={[styles.th, { flex: 1 }]}>EPISODES</Text>
-            <Text style={[styles.th, { flex: 1 }]}>STATUS</Text>
-            <Text style={[styles.th, { flex: 1.5 }]}>LAST EDITED</Text>
-            <Text style={[styles.th, { width: 80, textAlign: 'center' }]}>ACTION</Text>
+        {podcasts.length === 0 ? (
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>
+              No podcasts yet. Feeds need to be ingested first.
+            </Text>
           </View>
-
-          {MOCK_PODCASTS.map((p) => (
-            <View key={p.id} style={styles.tr}>
-              <Text style={[styles.td, { flex: 2.5, fontWeight: '500' }]}>{p.title}</Text>
-              <Text style={[styles.td, { flex: 1 }]}>{p.episodes}</Text>
-              <View style={{ flex: 1 }}>
-                <View style={[
-                  styles.badge,
-                  p.status === 'Published' && styles.badgeSuccess,
-                  p.status === 'Draft' && styles.badgeDraft,
-                  p.status === 'Review' && styles.badgeReview,
-                ]}>
-                  <Text style={[
-                    styles.badgeText,
-                    p.status === 'Published' && styles.badgeSuccessText,
-                    p.status === 'Draft' && styles.badgeDraftText,
-                    p.status === 'Review' && styles.badgeReviewText,
-                  ]}>{p.status.toUpperCase()}</Text>
-                </View>
-              </View>
-              <Text style={[styles.td, { flex: 1.5 }]}>{p.lastEdit}</Text>
-              <TouchableOpacity style={{ width: 80, alignItems: 'center' }}>
-                <Text style={{ color: '#7C3AED', fontWeight: '600', fontSize: 13 }}>Edit</Text>
-              </TouchableOpacity>
+        ) : (
+          <View style={styles.table}>
+            <View style={styles.tableHead}>
+              <Text style={[styles.th, { flex: 2.5 }]}>TITLE</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>AUTHOR</Text>
+              <Text style={[styles.th, { flex: 1 }]}>EPISODES</Text>
+              <Text style={[styles.th, { flex: 1 }]}>STATUS</Text>
+              <Text style={[styles.th, { width: 80, textAlign: 'center' as const }]}>ACTION</Text>
             </View>
-          ))}
-        </View>
+            {podcasts.map((p) => (
+              <View key={p.id} style={styles.tr}>
+                <Text style={[styles.td, { flex: 2.5, fontWeight: '500' }]} numberOfLines={1}>
+                  {p.title}
+                </Text>
+                <Text style={[styles.td, { flex: 1.5 }]} numberOfLines={1}>
+                  {p.author || 'Unknown'}
+                </Text>
+                <Text style={[styles.td, { flex: 1 }]}>{p.episode_count}</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={[styles.badge, p.featured ? styles.badgeSuccess : styles.badgeDraft]}>
+                    <Text style={[styles.badgeText, p.featured ? styles.badgeSuccessText : styles.badgeDraftText]}>
+                      {p.featured ? 'FEATURED' : 'STANDARD'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={{ width: 80, alignItems: 'center' as const }}
+                  onPress={() => router.push('/(editor)/podcasts' as any)}
+                >
+                  <Text style={styles.actionText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Quick Actions */}
       <View style={styles.quickActionsRow}>
-        <View style={styles.quickAction}>
+        <TouchableOpacity
+          style={styles.quickAction}
+          onPress={() => router.push('/(editor)/episodes' as any)}
+        >
+          <Text style={styles.quickActionIcon}>🎙️</Text>
+          <Text style={styles.quickActionTitle}>All Episodes</Text>
+          <Text style={styles.quickActionDesc}>Browse and manage episodes</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickAction}
+          onPress={() => router.push('/(editor)/drafts' as any)}
+        >
           <Text style={styles.quickActionIcon}>📝</Text>
-          <Text style={styles.quickActionTitle}>Create Draft</Text>
-          <Text style={styles.quickActionDesc}>Start a new episode draft</Text>
-        </View>
-        <View style={styles.quickAction}>
-          <Text style={styles.quickActionIcon}>📤</Text>
-          <Text style={styles.quickActionTitle}>Upload Media</Text>
-          <Text style={styles.quickActionDesc}>Add audio or images</Text>
-        </View>
-        <View style={styles.quickAction}>
-          <Text style={styles.quickActionIcon}>👁️</Text>
-          <Text style={styles.quickActionTitle}>Preview</Text>
-          <Text style={styles.quickActionDesc}>Preview published content</Text>
-        </View>
+          <Text style={styles.quickActionTitle}>Drafts</Text>
+          <Text style={styles.quickActionDesc}>Review pending drafts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickAction}
+          onPress={() => router.push('/(editor)/podcasts' as any)}
+        >
+          <Text style={styles.quickActionIcon}>📚</Text>
+          <Text style={styles.quickActionTitle}>Podcasts</Text>
+          <Text style={styles.quickActionDesc}>Manage podcast metadata</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { gap: 24 },
+  container: { flex: 1, backgroundColor: '#FAFAF9' },
+  contentContainer: { gap: 24, paddingBottom: 40 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF9' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#6B7280' },
   statsRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
   statCard: {
-    flex: 1,
-    minWidth: 160,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
+    flex: 1, minWidth: 160, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8,
+    borderWidth: 1, borderColor: '#E9D5FF',
   },
   statCardWarning: { borderColor: '#FDE68A' },
-  statTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 6,
-  },
-  statSubtitle: { fontSize: 13, color: '#6B7280' },
+  statTitle: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 12, letterSpacing: 0.5 },
+  statValue: { fontSize: 30, fontWeight: '700', color: '#1F2937', marginBottom: 6 },
+  statSubtext: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
   tableSection: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E9D5FF', borderRadius: 8,
   },
   tableHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9D5FF',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 24, borderBottomWidth: 1, borderBottomColor: '#E9D5FF',
   },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
-  addBtn: {
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  addBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
+  viewAllBtn: { paddingHorizontal: 12, paddingVertical: 6 },
+  viewAllBtnText: { fontSize: 13, color: '#7C3AED', fontWeight: '600' },
   table: { width: '100%' },
   tableHead: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3E8FF',
-    backgroundColor: '#FAFAF9',
+    flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F3E8FF', backgroundColor: '#FAFAF9',
   },
   th: { fontSize: 11, fontWeight: '600', color: '#6B7280', letterSpacing: 0.5 },
   tr: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F3FF',
-    alignItems: 'center',
+    flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F5F3FF', alignItems: 'center',
   },
   td: { fontSize: 14, color: '#374151' },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
@@ -178,19 +260,15 @@ const styles = StyleSheet.create({
   badgeSuccessText: { color: '#059669' },
   badgeDraft: { backgroundColor: '#F3F4F6' },
   badgeDraftText: { color: '#6B7280' },
-  badgeReview: { backgroundColor: '#FEF3C7' },
-  badgeReviewText: { color: '#D97706' },
+  actionText: { color: '#7C3AED', fontWeight: '600', fontSize: 13 },
   quickActionsRow: { flexDirection: 'row', gap: 16 },
   quickAction: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 8,
-    borderWidth: 1,
+    flex: 1, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 8, borderWidth: 1,
     borderColor: '#E9D5FF',
-    alignItems: 'center',
   },
-  quickActionIcon: { fontSize: 28, marginBottom: 12 },
+  quickActionIcon: { fontSize: 24, marginBottom: 8 },
   quickActionTitle: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 4 },
-  quickActionDesc: { fontSize: 12, color: '#6B7280', textAlign: 'center' },
+  quickActionDesc: { fontSize: 12, color: '#6B7280' },
+  emptyRow: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 14, color: '#94A3B8' },
 });
