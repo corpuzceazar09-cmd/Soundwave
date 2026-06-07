@@ -1,4 +1,4 @@
-﻿# Dependencies
+﻿# Heavy dependencies
 node_modules/
 
 # Build output
@@ -8,29 +8,22 @@ dist/
 .env
 .env.local
 
-# Session & operational artifacts
-.omo/run-continuation/
+# Cache & operational artifacts
 .index/
 .openindex/
 .playwright-mcp/
+.expo/
 *.log
 
-# Session ledgers
+# Session artifacts
+.omo/run-continuation/
 thoughts/ledgers/CONTINUITY_*.md
+
+# AI/IDE config (not project source)
+.agents/
+.claude/
+.vscode/
 
 # OS
 .DS_Store
 Thumbs.db
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Expo
-.expo/
-
-# AI config (project-specific)
-.agents/
-.claude/
