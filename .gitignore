@@ -1,1 +1,36 @@
-﻿Soundwave/
+﻿# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment & secrets
+.env
+.env.local
+
+# Session & operational artifacts
+.omo/run-continuation/
+.index/
+.openindex/
+.playwright-mcp/
+*.log
+
+# Session ledgers
+thoughts/ledgers/CONTINUITY_*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Expo
+.expo/
+
+# AI config (project-specific)
+.agents/
+.claude/

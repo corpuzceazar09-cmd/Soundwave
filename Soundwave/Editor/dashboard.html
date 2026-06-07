@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Podcast Editor Suite</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+</head>
+<body>
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-border-all"></i>
+          Editorial Dashboard
+        </a>
+        <a href="/dashboard" class="nav-item active">
+          <i class="fa-solid fa-list-check"></i>
+          Review Queue
+        </a>
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-pen-nib"></i>
+          Rich Editor
+        </a>
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-layer-group"></i>
+          Collections
+        </a>
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-microphone"></i>
+          Episodes
+        </a>
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-globe"></i>
+          Content Browser
+        </a>
+        <a href="/dashboard" class="nav-item">
+          <i class="fa-solid fa-gear"></i>
+          Admin Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full">Create New Collection</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link">
+            <i class="fa-regular fa-circle-question"></i>
+            Help Center
+          </a>
+          <a href="#" class="bottom-link">
+            <i class="fa-solid fa-chart-line"></i>
+            System Status
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" placeholder="Search podcast ID, title, or publisher...">
+        </div>
+
+        <div class="topbar-actions">
+          <button class="export-btn">EXPORT CSV</button>
+          <button class="btn-primary">PUBLISH CHANGES</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=0D8ABC&color=fff" alt="User" class="user-avatar">
+            <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem; color: var(--text-gray);"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Review Queue</h2>
+            <p class="page-subtitle">In-depth editorial enrichment and validation pipeline for ingested RSS feeds.</p>
+          </div>
+          <div class="view-toggle">
+            <button class="view-btn active">List View</button>
+            <button class="view-btn">Grid View</button>
+          </div>
+        </div>
+
+        <div class="filters-section">
+          <div class="filter-group">
+            <span class="filter-label">Filter by:</span>
+            <div class="filter-select">
+              Status: All Episodes <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="filter-select">
+              Category: Technology <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="filter-select">
+              Date: Last 7 Days <i class="fa-regular fa-calendar"></i>
+            </div>
+          </div>
+          <div class="filter-results">
+            Showing 42 pending reviews
+            <a href="#" style="font-weight: 500;">Clear All</a>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Podcast &amp; Publisher</th>
+              <th>Source RSS</th>
+              <th>Ingested Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="podcast-info">
+                  <div style="width: 48px; height: 48px; background: #0f172a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #38bdf8;"><i class="fa-solid fa-microphone-lines"></i></div>
+                  <div>
+                    <div class="podcast-title">Digital Frontier Echoes</div>
+                    <div class="podcast-publisher">Apex Media Networks</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <a href="#" class="rss-link">
+                  <i class="fa-solid fa-rss"></i>
+                  https://feeds.apex.media/d...
+                </a>
+              </td>
+              <td>
+                <div class="date-cell">Oct 24, 2023 &middot;</div>
+                <div class="date-time">09:12 AM</div>
+              </td>
+              <td>
+                <span class="badge badge-blue">
+                  <span class="badge-dot"></span> In Review
+                </span>
+              </td>
+              <td>
+                <button class="btn-primary" style="padding: 0.5rem 1.5rem;">Review</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="podcast-info">
+                  <div style="width: 48px; height: 48px; background: #1e293b; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8;"><i class="fa-solid fa-server"></i></div>
+                  <div>
+                    <div class="podcast-title">The Silent Capital</div>
+                    <div class="podcast-publisher">Independent Publisher</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <a href="#" class="rss-link">
+                  <i class="fa-solid fa-rss"></i>
+                  https://anchor.fm/s/silent-c...
+                </a>
+              </td>
+              <td>
+                <div class="date-cell">Oct 24, 2023 &middot;</div>
+                <div class="date-time">08:45 AM</div>
+              </td>
+              <td>
+                <span class="badge badge-red">
+                  <span class="badge-dot"></span> Needs Info
+                </span>
+              </td>
+              <td>
+                <button class="btn-primary" style="padding: 0.5rem 1.5rem;">Review</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="podcast-info">
+                  <div style="width: 48px; height: 48px; background: #334155; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #cbd5e1;"><i class="fa-solid fa-ghost"></i></div>
+                  <div>
+                    <div class="podcast-title">Urban Legends Decoded</div>
+                    <div class="podcast-publisher">Mythos Audio Collective</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <a href="#" class="rss-link">
+                  <i class="fa-solid fa-rss"></i>
+                  https://mythos.io/feeds/urb...
+                </a>
+              </td>
+              <td>
+                <div class="date-cell">Oct 23, 2023 &middot;</div>
+                <div class="date-time">11:20 PM</div>
+              </td>
+              <td>
+                <span class="badge badge-gray">
+                  <span class="badge-dot"></span> New
+                </span>
+              </td>
+              <td>
+                <button class="btn-primary" style="padding: 0.5rem 1.5rem;">Review</button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="podcast-info">
+                  <div style="width: 48px; height: 48px; background: #020617; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #3b82f6;"><i class="fa-solid fa-wave-square"></i></div>
+                  <div>
+                    <div class="podcast-title">The Weekly Grind</div>
+                    <div class="podcast-publisher">Startup Foundry</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <a href="#" class="rss-link">
+                  <i class="fa-solid fa-rss"></i>
+                  https://startupfoundry.com/...
+                </a>
+              </td>
+              <td>
+                <div class="date-cell">Oct 23, 2023 &middot;</div>
+                <div class="date-time">04:30 PM</div>
+              </td>
+              <td>
+                <span class="badge badge-blue">
+                  <span class="badge-dot"></span> In Review
+                </span>
+              </td>
+              <td>
+                <button class="btn-primary" style="padding: 0.5rem 1.5rem;">Review</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination">
+          <div class="page-info">Page <b>1</b> of 5</div>
+          <div class="page-controls">
+            <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-title">Total Pending</div>
+            <div class="stat-value-row">
+              <div class="stat-value">128</div>
+              <div class="stat-change change-red">+12% vs LY</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">In Review</div>
+            <div class="stat-value-row">
+              <div class="stat-value change-blue">14</div>
+              <div class="stat-change change-gray">Editors Active</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Avg Enrichment Time</div>
+            <div class="stat-value-row">
+              <div class="stat-value">24m</div>
+              <div class="stat-change change-blue">-2.4m Improvement</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Completion Rate</div>
+            <div class="stat-value-row">
+              <div class="stat-value">94.2%</div>
+              <div class="stat-change change-blue">Target: 92%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
