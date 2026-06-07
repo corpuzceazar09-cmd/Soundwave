@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Failed Jobs - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html" class="active"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <span>Failed Jobs</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span><i class="fas fa-exclamation-triangle" style="margin-right:10px;color:var(--error);"></i>Failed Jobs</span>
+          <div class="actions">
+            <button class="btn btn-sm btn-warning" id="retryAllFeedsBtn"><i class="fas fa-redo"></i> Retry All Feeds</button>
+            <button class="btn btn-sm btn-warning" id="retryAllIngestionsBtn"><i class="fas fa-redo"></i> Retry All Ingestion</button>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-row" id="failedSummary">
+          <div class="summary-card red">
+            <div class="number" id="totalFailedFeeds">—</div>
+            <div class="label">Failed Feeds</div>
+          </div>
+          <div class="summary-card red">
+            <div class="number" id="totalFailedIngestions">—</div>
+            <div class="label">Failed Ingestion Jobs</div>
+          </div>
+          <div class="summary-card blue">
+            <div class="number" id="totalRetries">—</div>
+            <div class="label">Total Retries</div>
+          </div>
+        </div>
+
+        <!-- Failed Feeds -->
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-rss" style="margin-right:8px;color:var(--error);"></i>Failed Feeds</h4>
+          </div>
+          <div class="section-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feed Name</th>
+                  <th>URL</th>
+                  <th>Error Message</th>
+                  <th>Last Attempt</th>
+                  <th>Retries</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="failedFeedsBody">
+                <tr>
+                  <td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Failed Ingestion Jobs -->
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-download" style="margin-right:8px;color:var(--error);"></i>Failed Ingestion Jobs</h4>
+          </div>
+          <div class="section-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Podcast</th>
+                  <th>Episode</th>
+                  <th>Error</th>
+                  <th>Failed At</th>
+                  <th>Duration</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="failedIngestionsBody">
+                <tr>
+                  <td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('admin_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      // --- Sample data ---
+      const SAMPLE_FAILED_FEEDS = [
+        { id: 1, name: 'Startup Stories', url: 'https://startupstories.co/feed', error_message: 'Connection timeout after 30s', last_attempt: '2026-06-07 08:30:00', retries: 3 },
+        { id: 2, name: 'EduCast', url: 'https://educast.org/rss', error_message: 'HTTP 404 - Feed not found', last_attempt: '2026-06-06 22:00:00', retries: 5 },
+        { id: 3, name: 'DevOps Decoded', url: 'https://devopsdecoded.io/feed.xml', error_message: 'Invalid RSS XML - missing channel title', last_attempt: '2026-06-06 18:15:00', retries: 2 },
+        { id: 4, name: 'The Crypto Corner', url: 'https://cryptocorner.xyz/rss', error_message: 'SSL certificate expired', last_attempt: '2026-06-05 14:00:00', retries: 7 },
+        { id: 5, name: 'History Uncovered', url: 'https://historyuncovered.com/feed', error_message: 'DNS resolution failed', last_attempt: '2026-06-04 09:45:00', retries: 1 },
+        { id: 6, name: 'Gadget Reviews Daily', url: 'https://gadgetdaily.com/rss.xml', error_message: 'Empty feed - no items found', last_attempt: '2026-06-07 06:00:00', retries: 4 },
+        { id: 7, name: 'Philosophy Now', url: 'https://philosophynow.org/podcast/feed', error_message: 'Rate limited by host (429)', last_attempt: '2026-06-03 12:30:00', retries: 9 }
+      ];
+
+      const SAMPLE_FAILED_INGESTIONS = [
+        { id: 101, podcast_name: 'Tech Frontier', episode_title: 'The Future of Quantum Computing', error: 'Audio file download failed - 403 Forbidden', failed_at: '2026-06-07 09:15:00', duration_sec: 45 },
+        { id: 102, podcast_name: 'Deep Dives', episode_title: 'Ocean Exploration in 2026', error: 'Transcript generation timeout', failed_at: '2026-06-07 08:45:00', duration_sec: 120 },
+        { id: 103, podcast_name: 'Code & Coffee', episode_title: 'Rust vs Go in Production', error: 'Metadata parse error: missing duration tag', failed_at: '2026-06-07 07:30:00', duration_sec: 30 },
+        { id: 104, podcast_name: 'Laugh Track', episode_title: 'Comedy in the Digital Age', error: 'Storage quota exceeded for audio processing', failed_at: '2026-06-06 22:00:00', duration_sec: 300 },
+        { id: 105, podcast_name: 'Soundwave Sessions', episode_title: 'Indie Artists Spotlight Vol. 3', error: 'Database connection lost during insert', failed_at: '2026-06-06 18:00:00', duration_sec: 15 },
+        { id: 106, podcast_name: 'Game On Podcast', episode_title: 'E3 2026 Roundup', error: 'Invalid episode GUID - duplicate detected', failed_at: '2026-06-06 14:30:00', duration_sec: 22 },
+        { id: 107, podcast_name: 'Data Driven Weekly', episode_title: 'Big Data Trends 2026', error: 'Audio format not supported (FLAC)', failed_at: '2026-06-05 10:00:00', duration_sec: 60 }
+      ];
+
+      let failedFeeds = [];
+      let failedIngestions = [];
+
+      function renderFailedFeeds() {
+        const tbody = document.getElementById('failedFeedsBody');
+        if (failedFeeds.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No failed feeds.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = failedFeeds.map(f => `
+          <tr>
+            <td><strong>${f.name}</strong></td>
+            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${f.url}">${f.url}</td>
+            <td><span style="color:var(--error);font-size:13px;">${f.error_message}</span></td>
+            <td style="font-size:13px;color:var(--text-secondary);">${f.last_attempt}</td>
+            <td>${f.retries}</td>
+            <td class="cell-actions">
+              <button class="btn btn-sm btn-info retry-feed-btn" data-id="${f.id}"><i class="fas fa-redo"></i> Retry</button>
+              <button class="btn btn-sm btn-danger dismiss-feed-btn" data-id="${f.id}"><i class="fas fa-times"></i> Dismiss</button>
+            </td>
+          </tr>
+        `).join('');
+
+        document.querySelectorAll('.retry-feed-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+              await fetch('/api/admin/failed/retry/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            } catch(e) {}
+            showToast('Retry triggered for feed #' + id, 'success');
+            this.innerHTML = '<i class="fas fa-redo"></i> Retry';
+          });
+        });
+
+        document.querySelectorAll('.dismiss-feed-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            failedFeeds = failedFeeds.filter(f => f.id != id);
+            renderFailedFeeds();
+            updateSummary();
+            try {
+              await fetch('/api/admin/failed/dismiss/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            } catch(e) {}
+            showToast('Feed dismissed', 'info');
+          });
+        });
+      }
+
+      function renderFailedIngestions() {
+        const tbody = document.getElementById('failedIngestionsBody');
+        if (failedIngestions.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No failed ingestion jobs.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = failedIngestions.map(j => `
+          <tr>
+            <td><strong>${j.podcast_name}</strong></td>
+            <td style="font-size:13px;">${j.episode_title}</td>
+            <td><span style="color:var(--error);font-size:13px;">${j.error}</span></td>
+            <td style="font-size:13px;color:var(--text-secondary);">${j.failed_at}</td>
+            <td>${j.duration_sec}s</td>
+            <td class="cell-actions">
+              <button class="btn btn-sm btn-info retry-ingestion-btn" data-id="${j.id}"><i class="fas fa-redo"></i> Retry</button>
+              <button class="btn btn-sm btn-outline dismiss-ingestion-btn" data-id="${j.id}"><i class="fas fa-times"></i> Dismiss</button>
+            </td>
+          </tr>
+        `).join('');
+
+        document.querySelectorAll('.retry-ingestion-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+              await fetch('/api/admin/failed/retry/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            } catch(e) {}
+            showToast('Retry triggered for job #' + id, 'success');
+            this.innerHTML = '<i class="fas fa-redo"></i> Retry';
+          });
+        });
+
+        document.querySelectorAll('.dismiss-ingestion-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            failedIngestions = failedIngestions.filter(j => j.id != id);
+            renderFailedIngestions();
+            updateSummary();
+            try {
+              await fetch('/api/admin/failed/dismiss/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            } catch(e) {}
+            showToast('Job dismissed', 'info');
+          });
+        });
+      }
+
+      function updateSummary() {
+        document.getElementById('totalFailedFeeds').textContent = failedFeeds.length;
+        document.getElementById('totalFailedIngestions').textContent = failedIngestions.length;
+        document.getElementById('totalRetries').textContent =
+          failedFeeds.reduce((s, f) => s + (f.retries || 0), 0) +
+          failedIngestions.reduce((s, j) => s + (j.retries || 0), 0);
+        document.getElementById('failedCount').textContent = failedFeeds.length + failedIngestions.length;
+      }
+
+      async function loadData() {
+        try {
+          const r1 = await fetch('/api/admin/failed-feeds', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (r1.ok) failedFeeds = await r1.json();
+          else failedFeeds = SAMPLE_FAILED_FEEDS;
+        } catch(e) { failedFeeds = SAMPLE_FAILED_FEEDS; }
+
+        try {
+          const r2 = await fetch('/api/admin/failed-ingestions', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (r2.ok) failedIngestions = await r2.json();
+          else failedIngestions = SAMPLE_FAILED_INGESTIONS;
+        } catch(e) { failedIngestions = SAMPLE_FAILED_INGESTIONS; }
+
+        renderFailedFeeds();
+        renderFailedIngestions();
+        updateSummary();
+      }
+
+      document.getElementById('retryAllFeedsBtn').addEventListener('click', async function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Retrying...';
+        try {
+          await fetch('/api/admin/failed/retry-all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        } catch(e) {}
+        showToast('Retrying all failed feeds...', 'info');
+        this.innerHTML = '<i class="fas fa-redo"></i> Retry All Feeds';
+      });
+
+      document.getElementById('retryAllIngestionsBtn').addEventListener('click', async function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Retrying...';
+        try {
+          await fetch('/api/admin/failed/retry-all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        } catch(e) {}
+        showToast('Retrying all failed ingestion jobs...', 'info');
+        this.innerHTML = '<i class="fas fa-redo"></i> Retry All Ingestion';
+      });
+
+      function showToast(message, type) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type + ' show';
+        const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle';
+        toast.innerHTML = '<i class="fas ' + icon + '"></i> ' + message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+      }
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>

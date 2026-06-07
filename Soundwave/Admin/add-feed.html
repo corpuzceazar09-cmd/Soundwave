@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Feed - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html" class="active"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <a href="feeds.html">Feeds</a>
+            <span>/</span>
+            <span>Add Feed</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span><i class="fas fa-plus-circle" style="margin-right:10px;color:var(--accent);"></i>Add New Feed</span>
+        </div>
+
+        <div class="form-card" id="addFeedFormCard">
+          <form id="addFeedForm" autocomplete="off">
+            <div class="form-group">
+              <label for="feedUrl">RSS Feed URL <span class="required">*</span></label>
+              <input type="url" id="feedUrl" name="url" placeholder="https://example.com/feed.xml" required />
+              <div class="help-text">Enter the full URL to the RSS/Atom feed.</div>
+              <div class="field-error" id="urlError">Please enter a valid URL starting with http:// or https://</div>
+            </div>
+
+            <div class="form-group">
+              <label for="feedName">Feed Name</label>
+              <input type="text" id="feedName" name="name" placeholder="Auto-detected if left empty" />
+              <div class="help-text">Leave empty to auto-detect from the feed metadata.</div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="feedCategory">Category</label>
+                <select id="feedCategory" name="category">
+                  <option value="Technology">Technology</option>
+                  <option value="Business">Business</option>
+                  <option value="Science">Science</option>
+                  <option value="Arts">Arts</option>
+                  <option value="Comedy">Comedy</option>
+                  <option value="News">News</option>
+                  <option value="Education">Education</option>
+                  <option value="Music">Music</option>
+                  <option value="Sports">Sports</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="feedInterval">Polling Interval</label>
+                <select id="feedInterval" name="interval">
+                  <option value="30">Every 30 minutes</option>
+                  <option value="60" selected>Every 1 hour</option>
+                  <option value="360">Every 6 hours</option>
+                  <option value="1440">Every 24 hours</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top:10px;">
+              <i class="fas fa-plus"></i>
+              <span>Add Feed</span>
+            </button>
+          </form>
+
+          <div id="successMessage" style="display:none;padding:30px;text-align:center;">
+            <i class="fas fa-check-circle" style="font-size:48px;color:var(--success);margin-bottom:15px;"></i>
+            <h3 style="color:#fff;margin-bottom:8px;">Feed Added Successfully!</h3>
+            <p style="color:var(--text-secondary);margin-bottom:20px;" id="successFeedName"></p>
+            <div style="display:flex;gap:12px;justify-content:center;">
+              <a href="add-feed.html" class="btn btn-secondary"><i class="fas fa-plus"></i> Add Another</a>
+              <a href="feeds.html" class="btn btn-primary"><i class="fas fa-rss"></i> View Feeds</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recently Added Feeds -->
+        <div class="section-card" style="margin-top:25px;max-width:700px;">
+          <div class="section-header">
+            <h4><i class="fas fa-clock" style="margin-right:8px;color:var(--text-secondary);"></i>Recently Added Feeds</h4>
+          </div>
+          <div class="recent-list">
+            <div class="recent-item">
+              <span class="feed-name"><i class="fas fa-rss" style="color:var(--accent);margin-right:8px;font-size:12px;"></i>Data Driven Weekly</span>
+              <span class="feed-date">Added 2 hours ago</span>
+            </div>
+            <div class="recent-item">
+              <span class="feed-name"><i class="fas fa-rss" style="color:var(--accent);margin-right:8px;font-size:12px;"></i>AI Revolution</span>
+              <span class="feed-date">Added 5 hours ago</span>
+            </div>
+            <div class="recent-item">
+              <span class="feed-name"><i class="fas fa-rss" style="color:var(--accent);margin-right:8px;font-size:12px;"></i>The Creative Block</span>
+              <span class="feed-date">Added 1 day ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('admin_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      const form = document.getElementById('addFeedForm');
+      const urlInput = document.getElementById('feedUrl');
+      const urlError = document.getElementById('urlError');
+      const submitBtn = document.getElementById('submitBtn');
+      const formCard = document.getElementById('addFeedFormCard');
+      const successMsg = document.getElementById('successMessage');
+      const successName = document.getElementById('successFeedName');
+      const formEl = document.getElementById('addFeedForm');
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        urlError.classList.remove('show');
+
+        const url = urlInput.value.trim();
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          urlError.classList.add('show');
+          urlInput.classList.add('error');
+          return;
+        }
+        urlInput.classList.remove('error');
+
+        const payload = {
+          url: url,
+          name: document.getElementById('feedName').value.trim(),
+          category: document.getElementById('feedCategory').value,
+          interval: parseInt(document.getElementById('feedInterval').value)
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+
+        try {
+          const res = await fetch('/api/admin/feeds/add', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            successName.textContent = payload.name || url;
+            formEl.style.display = 'none';
+            successMsg.style.display = 'block';
+          } else {
+            alert(data.error || 'Failed to add feed.');
+          }
+        } catch (err) {
+          // Mock success for demo
+          successName.textContent = payload.name || url;
+          formEl.style.display = 'none';
+          successMsg.style.display = 'block';
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Feed';
+      });
+
+      // Reset form if navigating back
+      if (window.location.search.includes('new')) {
+        formEl.style.display = 'block';
+        successMsg.style.display = 'none';
+        form.reset();
+      }
+    })();
+  </script>
+</body>
+</html>

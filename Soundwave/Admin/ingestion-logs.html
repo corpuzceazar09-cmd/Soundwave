@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingestion Logs - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html" class="active"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <span>Ingestion Logs</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span><i class="fas fa-history" style="margin-right:10px;color:var(--info);"></i>Ingestion Logs</span>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-row" id="logSummary">
+          <div class="summary-card blue">
+            <div class="number" id="totalJobs">—</div>
+            <div class="label">Total Jobs</div>
+          </div>
+          <div class="summary-card green">
+            <div class="number" id="successfulJobs">—</div>
+            <div class="label">Successful</div>
+          </div>
+          <div class="summary-card red">
+            <div class="number" id="failedJobs">—</div>
+            <div class="label">Failed</div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="filter-tabs" id="statusFilter">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="success">Success</button>
+              <button class="filter-tab" data-filter="error">Error</button>
+              <button class="filter-tab" data-filter="running">Running</button>
+            </div>
+            <div class="section-actions filter-bar">
+              <input type="text" id="logSearch" placeholder="Search podcast..." />
+              <input type="date" id="dateFrom" />
+              <input type="date" id="dateTo" />
+              <button class="btn btn-sm btn-outline" id="applyFilterBtn">Apply</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Podcast</th>
+                  <th>Episode</th>
+                  <th>Status</th>
+                  <th>Duration</th>
+                  <th>Episodes</th>
+                  <th>Started</th>
+                  <th>Completed</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody">
+                <tr>
+                  <td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading logs...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="pagination">
+            <a class="disabled"><i class="fas fa-chevron-left"></i></a>
+            <a class="active">1</a>
+            <a>2</a>
+            <a>3</a>
+            <a><i class="fas fa-chevron-right"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4><i class="fas fa-info-circle" style="margin-right:8px;color:var(--info);"></i>Job Details</h4>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="detailModalBody">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Podcast</strong><br/><span id="detailPodcast" style="color:#fff;"></span></div>
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Episode</strong><br/><span id="detailEpisode" style="color:#fff;"></span></div>
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Status</strong><br/><span id="detailStatus"></span></div>
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Duration</strong><br/><span id="detailDuration" style="color:#fff;"></span></div>
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Started</strong><br/><span id="detailStarted" style="color:var(--text-secondary);"></span></div>
+          <div><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Completed</strong><br/><span id="detailCompleted" style="color:var(--text-secondary);"></span></div>
+          <div style="grid-column:1/-1;"><strong style="color:var(--text-secondary);font-size:12px;text-transform:uppercase;">Error</strong><br/><span id="detailError" style="color:var(--error);"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('admin_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      const SAMPLE_LOGS = [
+        { id: 1, podcast_name: 'Tech Frontier', episode_title: 'The Future of Quantum Computing', status: 'success', duration_sec: 45, episodes_count: 3, started_at: '2026-06-07T09:15:00Z', completed_at: '2026-06-07T09:15:45Z' },
+        { id: 2, podcast_name: 'Deep Dives', episode_title: 'Ocean Exploration in 2026', status: 'success', duration_sec: 32, episodes_count: 2, started_at: '2026-06-07T09:00:00Z', completed_at: '2026-06-07T09:00:32Z' },
+        { id: 3, podcast_name: 'Code & Coffee', episode_title: 'Rust vs Go in Production', status: 'error', duration_sec: 12, episodes_count: 0, started_at: '2026-06-07T08:45:00Z', completed_at: null, error_message: 'Metadata parse error: missing duration tag' },
+        { id: 4, podcast_name: 'AI Revolution', episode_title: 'Neural Networks Explained', status: 'running', duration_sec: 0, episodes_count: 0, started_at: '2026-06-07T10:00:00Z', completed_at: null },
+        { id: 5, podcast_name: 'Data Driven Weekly', episode_title: 'Big Data Trends 2026', status: 'success', duration_sec: 78, episodes_count: 5, started_at: '2026-06-07T08:00:00Z', completed_at: '2026-06-07T08:01:18Z' },
+        { id: 6, podcast_name: 'Laugh Track', episode_title: 'Comedy in the Digital Age', status: 'success', duration_sec: 55, episodes_count: 4, started_at: '2026-06-07T07:30:00Z', completed_at: '2026-06-07T07:30:55Z' },
+        { id: 7, podcast_name: 'Soundwave Sessions', episode_title: 'Indie Spotlight Vol. 3', status: 'error', duration_sec: 300, episodes_count: 0, started_at: '2026-06-07T06:00:00Z', completed_at: null, error_message: 'Audio processing timeout - file too large' },
+        { id: 8, podcast_name: 'EduCast', episode_title: 'Learning at Scale', status: 'success', duration_sec: 22, episodes_count: 1, started_at: '2026-06-07T05:30:00Z', completed_at: '2026-06-07T05:30:22Z' },
+        { id: 9, podcast_name: 'Game On', episode_title: 'E3 2026 Roundup', status: 'running', duration_sec: 0, episodes_count: 0, started_at: '2026-06-07T10:15:00Z', completed_at: null },
+        { id: 10, podcast_name: 'Tech Frontier', episode_title: 'AI in Healthcare', status: 'success', duration_sec: 38, episodes_count: 2, started_at: '2026-06-07T04:00:00Z', completed_at: '2026-06-07T04:00:38Z' },
+        { id: 11, podcast_name: 'Startup Stories', episode_title: 'From Garage to IPO', status: 'error', duration_sec: 5, episodes_count: 0, started_at: '2026-06-07T03:00:00Z', completed_at: null, error_message: 'Feed not reachable (connection timeout)' },
+        { id: 12, podcast_name: 'Deep Dives', episode_title: 'Deep Sea Discoveries', status: 'success', duration_sec: 60, episodes_count: 4, started_at: '2026-06-06T22:00:00Z', completed_at: '2026-06-06T22:01:00Z' },
+        { id: 13, podcast_name: 'The Creative Block', episode_title: 'Overcoming Creative Burnout', status: 'success', duration_sec: 18, episodes_count: 1, started_at: '2026-06-06T20:00:00Z', completed_at: '2026-06-06T20:00:18Z' },
+        { id: 14, podcast_name: 'Data Driven Weekly', episode_title: 'Data Visualization Best Practices', status: 'success', duration_sec: 42, episodes_count: 3, started_at: '2026-06-06T18:00:00Z', completed_at: '2026-06-06T18:00:42Z' },
+        { id: 15, podcast_name: 'AI Revolution', episode_title: 'Ethics of Autonomous Systems', status: 'error', duration_sec: 8, episodes_count: 0, started_at: '2026-06-06T16:00:00Z', completed_at: null, error_message: 'Invalid episode GUID - duplicate' }
+      ];
+
+      let logs = [];
+      let currentFilter = 'all';
+
+      function renderLogs() {
+        const tbody = document.getElementById('logsTableBody');
+        let filtered = logs;
+
+        if (currentFilter !== 'all') {
+          filtered = filtered.filter(l => l.status === currentFilter);
+        }
+
+        const query = document.getElementById('logSearch').value.toLowerCase();
+        if (query) {
+          filtered = filtered.filter(l => l.podcast_name.toLowerCase().includes(query));
+        }
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No logs found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(job => {
+          const sc = job.status === 'success' ? 'badge-success' : job.status === 'error' ? 'badge-error' : 'badge-running';
+          const si = job.status === 'success' ? 'fa-check-circle' : job.status === 'error' ? 'fa-times-circle' : 'fa-spinner fa-spin';
+          const dur = job.duration_sec ? job.duration_sec + 's' : '—';
+          const started = job.started_at ? new Date(job.started_at).toLocaleString() : '—';
+          const completed = job.completed_at ? new Date(job.completed_at).toLocaleString() : '—';
+          return `<tr>
+            <td><strong>${job.podcast_name}</strong></td>
+            <td style="font-size:13px;">${job.episode_title || '—'}</td>
+            <td><span class="badge ${sc}"><i class="fas ${si}"></i> ${job.status}</span></td>
+            <td>${dur}</td>
+            <td>${job.episodes_count ?? '—'}</td>
+            <td style="font-size:13px;color:var(--text-secondary);">${started}</td>
+            <td style="font-size:13px;color:var(--text-secondary);">${completed}</td>
+            <td class="cell-actions">
+              <button class="btn btn-sm btn-outline view-detail-btn" data-id="${job.id}"><i class="fas fa-eye"></i></button>
+            </td>
+          </tr>`;
+        }).join('');
+
+        document.querySelectorAll('.view-detail-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            const job = logs.find(l => l.id === id);
+            if (!job) return;
+            document.getElementById('detailPodcast').textContent = job.podcast_name;
+            document.getElementById('detailEpisode').textContent = job.episode_title || '—';
+            const sc = job.status === 'success' ? 'badge-success' : job.status === 'error' ? 'badge-error' : 'badge-running';
+            const si = job.status === 'success' ? 'fa-check-circle' : job.status === 'error' ? 'fa-times-circle' : 'fa-spinner fa-spin';
+            document.getElementById('detailStatus').innerHTML = `<span class="badge ${sc}"><i class="fas ${si}"></i> ${job.status}</span>`;
+            document.getElementById('detailDuration').textContent = job.duration_sec ? job.duration_sec + 's' : '—';
+            document.getElementById('detailStarted').textContent = job.started_at ? new Date(job.started_at).toLocaleString() : '—';
+            document.getElementById('detailCompleted').textContent = job.completed_at ? new Date(job.completed_at).toLocaleString() : '—';
+            document.getElementById('detailError').textContent = job.error_message || 'None';
+            document.getElementById('detailModal').classList.add('show');
+          });
+        });
+      }
+
+      function updateSummary() {
+        const total = logs.length;
+        const success = logs.filter(l => l.status === 'success').length;
+        const failed = logs.filter(l => l.status === 'error').length;
+        document.getElementById('totalJobs').textContent = total;
+        document.getElementById('successfulJobs').textContent = success;
+        document.getElementById('failedJobs').textContent = failed;
+      }
+
+      async function loadLogs() {
+        try {
+          const res = await fetch('/api/admin/ingestion-logs', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) logs = await res.json();
+          else logs = SAMPLE_LOGS;
+        } catch(e) { logs = SAMPLE_LOGS; }
+        updateSummary();
+        renderLogs();
+      }
+
+      document.querySelectorAll('#statusFilter .filter-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('#statusFilter .filter-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          currentFilter = this.dataset.filter;
+          renderLogs();
+        });
+      });
+
+      document.getElementById('applyFilterBtn').addEventListener('click', renderLogs);
+      document.getElementById('logSearch').addEventListener('input', renderLogs);
+
+      document.getElementById('closeModalBtn').addEventListener('click', function() {
+        document.getElementById('detailModal').classList.remove('show');
+      });
+      document.getElementById('detailModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('show');
+      });
+
+      loadLogs();
+    })();
+  </script>
+</body>
+</html>

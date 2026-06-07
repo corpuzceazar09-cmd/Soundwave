@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html" class="active"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <span>Dashboard</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span>Dashboard Overview</span>
+          <div class="actions">
+            <a href="add-feed.html" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Feed</a>
+            <a href="feeds.html" class="btn btn-secondary btn-sm"><i class="fas fa-rss"></i> All Feeds</a>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-microphone"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="totalPodcasts">—</div>
+              <div class="stat-label">Total Podcasts</div>
+              <div class="stat-change up"><i class="fas fa-arrow-up"></i> +12 this week</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-list"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="totalEpisodes">—</div>
+              <div class="stat-label">Total Episodes</div>
+              <div class="stat-change up"><i class="fas fa-arrow-up"></i> +48 this week</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="failedJobs">—</div>
+              <div class="stat-label">Failed Jobs</div>
+              <div class="stat-change down"><i class="fas fa-arrow-down"></i> 3 new today</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-rss"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="activeFeeds">—</div>
+              <div class="stat-label">Active Feeds</div>
+              <div class="stat-change up"><i class="fas fa-check-circle"></i> All running</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Ingestion Jobs -->
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-clock" style="margin-right:8px;color:var(--accent);"></i>Recent Ingestion Jobs</h4>
+            <div class="section-actions">
+              <a href="ingestion-logs.html" class="btn btn-sm btn-outline">View All</a>
+            </div>
+          </div>
+          <div class="section-body">
+            <table id="recentJobsTable">
+              <thead>
+                <tr>
+                  <th>Podcast</th>
+                  <th>Status</th>
+                  <th>Episodes</th>
+                  <th>Duration</th>
+                  <th>Started At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recentJobsBody">
+                <tr>
+                  <td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading jobs...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-card">
+          <div class="section-header">
+            <h4><i class="fas fa-bolt" style="margin-right:8px;color:var(--warning);"></i>Quick Actions</h4>
+          </div>
+          <div class="quick-actions-grid">
+            <a href="add-feed.html" class="quick-action-item">
+              <i class="fas fa-plus-circle"></i>
+              <h5>Add New Feed</h5>
+              <p>Add a new RSS feed to monitor</p>
+            </a>
+            <a href="feeds.html" class="quick-action-item">
+              <i class="fas fa-rss"></i>
+              <h5>View All Feeds</h5>
+              <p>Manage your RSS feed sources</p>
+            </a>
+            <a href="failed-jobs.html" class="quick-action-item">
+              <i class="fas fa-exclamation-triangle"></i>
+              <h5>Check Failed Jobs</h5>
+              <p>Review and retry failed operations</p>
+            </a>
+            <a href="raw-data.html" class="quick-action-item">
+              <i class="fas fa-database"></i>
+              <h5>Browse Raw Data</h5>
+              <p>Explore podcast and episode data</p>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      // --- Auth guard ---
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      // --- Logout ---
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      // --- Fetch Stats ---
+      async function loadStats() {
+        try {
+          const res = await fetch('/api/admin/stats', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!res.ok) throw new Error('Failed');
+          const data = await res.json();
+          document.getElementById('totalPodcasts').textContent = data.totalPodcasts ?? '—';
+          document.getElementById('totalEpisodes').textContent = data.totalEpisodes?.toLocaleString() ?? '—';
+          document.getElementById('failedJobs').textContent = data.failedJobs ?? '—';
+          document.getElementById('activeFeeds').textContent = data.activeFeeds ?? '—';
+
+          const fc = document.getElementById('failedCount');
+          if (fc && data.failedJobs != null) fc.textContent = data.failedJobs;
+        } catch (err) {
+          // Fallback demo data
+          document.getElementById('totalPodcasts').textContent = '156';
+          document.getElementById('totalEpisodes').textContent = '3,421';
+          document.getElementById('failedJobs').textContent = '23';
+          document.getElementById('activeFeeds').textContent = '45';
+        }
+      }
+
+      // --- Fetch Recent Jobs ---
+      async function loadRecentJobs() {
+        const tbody = document.getElementById('recentJobsBody');
+        try {
+          const res = await fetch('/api/admin/recent-jobs', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!res.ok) throw new Error('Failed');
+          const jobs = await res.json();
+          renderJobs(jobs);
+        } catch (err) {
+          // Fallback demo data
+          const fallback = [
+            { id: 1, podcast_name: 'Tech Frontier', status: 'success', episodes_count: 3, duration_sec: 45, started_at: '2026-06-07T08:30:00Z' },
+            { id: 2, podcast_name: 'Deep Dives', status: 'success', episodes_count: 2, duration_sec: 32, started_at: '2026-06-07T08:00:00Z' },
+            { id: 3, podcast_name: 'Code & Coffee', status: 'error', episodes_count: 0, duration_sec: 12, started_at: '2026-06-07T07:45:00Z' },
+            { id: 4, podcast_name: 'AI Revolution', status: 'running', episodes_count: 1, duration_sec: 0, started_at: '2026-06-07T09:00:00Z' },
+            { id: 5, podcast_name: 'Data Driven Weekly', status: 'success', episodes_count: 5, duration_sec: 78, started_at: '2026-06-07T06:30:00Z' }
+          ];
+          renderJobs(fallback);
+        }
+      }
+
+      function renderJobs(jobs) {
+        const tbody = document.getElementById('recentJobsBody');
+        if (!jobs || jobs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No recent jobs</td></tr>';
+          return;
+        }
+        tbody.innerHTML = jobs.map(job => {
+          const statusClass = job.status === 'success' ? 'badge-success' : job.status === 'error' ? 'badge-error' : 'badge-running';
+          const statusIcon = job.status === 'success' ? 'fa-check-circle' : job.status === 'error' ? 'fa-times-circle' : 'fa-spinner fa-spin';
+          const duration = job.duration_sec ? job.duration_sec + 's' : '—';
+          const started = job.started_at ? new Date(job.started_at).toLocaleString() : '—';
+          return `<tr>
+            <td><strong>${job.podcast_name || 'Unknown'}</strong></td>
+            <td><span class="badge ${statusClass}"><i class="fas ${statusIcon}"></i> ${job.status}</span></td>
+            <td>${job.episodes_count ?? '—'}</td>
+            <td>${duration}</td>
+            <td>${started}</td>
+            <td class="cell-actions">
+              <a href="ingestion-logs.html" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> View</a>
+            </td>
+          </tr>`;
+        }).join('');
+      }
+
+      loadStats();
+      loadRecentJobs();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raw Data - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html" class="active"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <span>Raw Data</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span><i class="fas fa-database" style="margin-right:10px;color:var(--info);"></i>Podcast Data Browser</span>
+          <div style="position:relative;">
+            <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;"></i>
+            <input type="text" id="podcastSearch" placeholder="Search podcasts..."
+              style="padding:8px 14px 8px 34px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);outline:none;min-width:250px;" />
+          </div>
+        </div>
+
+        <!-- Two Panel Layout -->
+        <div class="two-panel">
+          <!-- Left Panel - Podcast List -->
+          <div class="panel">
+            <div class="panel-header">
+              <h5><i class="fas fa-microphone" style="margin-right:6px;color:var(--accent);"></i>Podcasts</h5>
+              <span id="podcastCount" style="font-size:12px;color:var(--text-muted);">0</span>
+            </div>
+            <div class="panel-body">
+              <table id="podcastTable" style="width:100%;">
+                <thead>
+                  <tr>
+                    <th style="width:40px;"></th>
+                    <th>Name</th>
+                    <th>Author</th>
+                    <th>Ep.</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="podcastTableBody">
+                  <tr>
+                    <td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);">
+                      <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right Panel - Episode Detail -->
+          <div class="panel">
+            <div class="panel-header">
+              <h5><i class="fas fa-list" style="margin-right:6px;color:var(--info);"></i>Episodes</h5>
+            </div>
+            <div class="panel-body" id="episodePanelBody">
+              <div class="placeholder-content">
+                <i class="fas fa-arrow-left"></i>
+                <h4>Select a Podcast</h4>
+                <p>Click a podcast from the left panel to view its episodes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <!-- JSON Modal -->
+  <div class="modal-overlay" id="jsonModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4><i class="fas fa-code" style="margin-right:8px;color:var(--success);"></i>Raw JSON Data</h4>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-success" id="copyJsonBtn"><i class="fas fa-copy"></i> Copy</button>
+          <button class="close-btn" id="closeJsonModalBtn">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <pre id="jsonContent">Loading...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('admin_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      // --- Sample Podcasts ---
+      const SAMPLE_PODCASTS = [
+        { id: 1, name: 'Tech Frontier', author: 'Sarah Chen', category: 'Technology', episodes: 342, last_updated: '2026-06-07' },
+        { id: 2, name: 'Deep Dives', author: 'Marcus Webb', category: 'Science', episodes: 156, last_updated: '2026-06-07' },
+        { id: 3, name: 'Code & Coffee', author: 'Alex Rivera', category: 'Technology', episodes: 210, last_updated: '2026-06-07' },
+        { id: 4, name: 'Startup Stories', author: 'Jessica Kim', category: 'Business', episodes: 89, last_updated: '2026-06-06' },
+        { id: 5, name: 'Data Driven Weekly', author: 'Dr. Nina Patel', category: 'Science', episodes: 278, last_updated: '2026-06-07' },
+        { id: 6, name: 'AI Revolution', author: 'Tom Nakamura', category: 'Technology', episodes: 195, last_updated: '2026-06-07' },
+        { id: 7, name: 'The Creative Block', author: 'Olivia Grant', category: 'Arts', episodes: 67, last_updated: '2026-06-05' },
+        { id: 8, name: 'Laugh Track', author: 'Danny O\'Brien', category: 'Comedy', episodes: 412, last_updated: '2026-06-07' },
+        { id: 9, name: 'EduCast', author: 'Prof. James Wright', category: 'Education', episodes: 134, last_updated: '2026-06-06' },
+        { id: 10, name: 'Soundwave Sessions', author: 'Luna Martinez', category: 'Music', episodes: 520, last_updated: '2026-06-07' },
+        { id: 11, name: 'Health & Wellness', author: 'Dr. Amara Singh', category: 'Science', episodes: 98, last_updated: '2026-06-04' },
+        { id: 12, name: 'Game On', author: 'Ryan Scott', category: 'Technology', episodes: 634, last_updated: '2026-06-07' }
+      ];
+
+      const EPISODE_DATA = {
+        1: [
+          { id: 101, title: 'The Future of Quantum Computing', duration_sec: 3600, published_at: '2026-06-05', status: 'ingested' },
+          { id: 102, title: 'AI in Healthcare: Revolution or Risk?', duration_sec: 2700, published_at: '2026-05-29', status: 'ingested' },
+          { id: 103, title: 'Building Scalable Microservices', duration_sec: 4200, published_at: '2026-05-22', status: 'pending' },
+          { id: 104, title: 'The Rise of Edge Computing', duration_sec: 3100, published_at: '2026-05-15', status: 'ingested' },
+          { id: 105, title: 'Cybersecurity in a Remote World', duration_sec: 2800, published_at: '2026-05-08', status: 'failed' }
+        ],
+        2: [
+          { id: 201, title: 'Ocean Exploration in 2026', duration_sec: 3900, published_at: '2026-06-06', status: 'ingested' },
+          { id: 202, title: 'The Physics of Black Holes', duration_sec: 4500, published_at: '2026-05-30', status: 'ingested' },
+          { id: 203, title: 'Climate Change: Latest Research', duration_sec: 3300, published_at: '2026-05-23', status: 'ingested' }
+        ],
+        3: [
+          { id: 301, title: 'Rust vs Go in Production', duration_sec: 2400, published_at: '2026-06-06', status: 'ingested' },
+          { id: 302, title: 'TypeScript Secrets You Should Know', duration_sec: 2100, published_at: '2026-05-30', status: 'ingested' },
+          { id: 303, title: 'The State of WebAssembly', duration_sec: 3600, published_at: '2026-05-23', status: 'pending' }
+        ]
+      };
+      // Fill remaining with generated data
+      SAMPLE_PODCASTS.forEach(p => {
+        if (!EPISODE_DATA[p.id]) {
+          EPISODE_DATA[p.id] = [
+            { id: p.id * 100 + 1, title: p.name + ' - Episode 1', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-06-0' + (Math.floor(Math.random() * 7) + 1), status: 'ingested' },
+            { id: p.id * 100 + 2, title: p.name + ' - Episode 2', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-05-0' + (Math.floor(Math.random() * 28) + 1), status: 'ingested' },
+            { id: p.id * 100 + 3, title: p.name + ' - Episode 3', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-05-0' + (Math.floor(Math.random() * 15) + 1), status: 'pending' }
+          ];
+        }
+      });
+
+      let podcasts = [];
+
+      function renderPodcasts(list) {
+        const tbody = document.getElementById('podcastTableBody');
+        document.getElementById('podcastCount').textContent = list.length;
+
+        tbody.innerHTML = list.map(p => `
+          <tr class="podcast-row" data-id="${p.id}" style="cursor:pointer;">
+            <td style="text-align:center;">
+              <div style="width:32px;height:32px;background:var(--bg-secondary);border-radius:6px;display:flex;align-items:center;justify-content:center;margin:auto;font-size:14px;color:var(--text-muted);">
+                <i class="fas fa-podcast"></i>
+              </div>
+            </td>
+            <td><strong style="font-size:13px;">${p.name}</strong></td>
+            <td style="font-size:12px;color:var(--text-secondary);">${p.author}</td>
+            <td style="font-size:13px;">${p.episodes}</td>
+            <td style="font-size:12px;color:var(--text-muted);">${p.last_updated}</td>
+          </tr>
+        `).join('');
+
+        // Click handler
+        document.querySelectorAll('.podcast-row').forEach(row => {
+          row.addEventListener('click', function() {
+            document.querySelectorAll('.podcast-row').forEach(r => r.style.background = '');
+            this.style.background = 'rgba(233, 69, 96, 0.08)';
+            const pid = parseInt(this.dataset.id);
+            showEpisodes(pid);
+          });
+        });
+      }
+
+      function showEpisodes(podcastId) {
+        const panel = document.getElementById('episodePanelBody');
+        const podcast = podcasts.find(p => p.id === podcastId);
+        const episodes = EPISODE_DATA[podcastId] || [];
+
+        if (!podcast) {
+          panel.innerHTML = '<div class="placeholder-content"><i class="fas fa-exclamation-circle"></i><h4>Podcast not found</h4></div>';
+          return;
+        }
+
+        const duration = episodes.reduce((s, e) => s + e.duration_sec, 0);
+        const durStr = duration > 3600 ? (duration / 3600).toFixed(1) + 'h' : duration > 60 ? Math.floor(duration / 60) + 'm' : duration + 's';
+
+        panel.innerHTML = `
+          <div class="episode-podcast-header">
+            <div class="podcast-thumb"><i class="fas fa-podcast"></i></div>
+            <div class="podcast-meta">
+              <h5>${podcast.name}</h5>
+              <span>${podcast.author} &middot; ${episodes.length} episodes &middot; ${durStr} total</span>
+            </div>
+            <div style="margin-left:auto;">
+              <button class="btn btn-sm btn-outline view-json-btn" data-id="${podcastId}"><i class="fas fa-code"></i> Raw JSON</button>
+            </div>
+          </div>
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Duration</th>
+                <th>Published</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${episodes.map(ep => {
+                const dur = ep.duration_sec > 3600 ? new Date(ep.duration_sec * 1000).toISOString().substr(11, 8) : Math.floor(ep.duration_sec / 60) + ':' + String(ep.duration_sec % 60).padStart(2, '0');
+                const sc = ep.status === 'ingested' ? 'badge-success' : ep.status === 'failed' ? 'badge-error' : 'badge-pending';
+                return `<tr>
+                  <td style="font-size:13px;">${ep.title}</td>
+                  <td style="font-size:13px;color:var(--text-secondary);">${dur}</td>
+                  <td style="font-size:12px;color:var(--text-muted);">${ep.published_at}</td>
+                  <td><span class="badge ${sc}">${ep.status}</span></td>
+                  <td class="cell-actions">
+                    <button class="btn btn-xs btn-outline view-json-ep-btn" data-podcast="${podcastId}" data-episode='${JSON.stringify(ep).replace(/'/g, "&#39;")}'><i class="fas fa-code"></i></button>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        // Bind JSON view buttons
+        panel.querySelector('.view-json-btn')?.addEventListener('click', function() {
+          const pid = parseInt(this.dataset.id);
+          const p = podcasts.find(x => x.id === pid);
+          const eps = EPISODE_DATA[pid] || [];
+          const jsonData = { podcast: p, episodes: eps, fetched_at: new Date().toISOString() };
+          document.getElementById('jsonContent').textContent = JSON.stringify(jsonData, null, 2);
+          document.getElementById('jsonModal').classList.add('show');
+        });
+
+        panel.querySelectorAll('.view-json-ep-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const ep = JSON.parse(this.dataset.episode);
+            const jsonData = { episode: ep, podcast_id: this.dataset.podcast, fetched_at: new Date().toISOString() };
+            document.getElementById('jsonContent').textContent = JSON.stringify(jsonData, null, 2);
+            document.getElementById('jsonModal').classList.add('show');
+          });
+        });
+      }
+
+      // --- Load podcasts ---
+      async function loadPodcasts() {
+        try {
+          const res = await fetch('/api/admin/podcasts', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) podcasts = await res.json();
+          else podcasts = SAMPLE_PODCASTS;
+        } catch(e) { podcasts = SAMPLE_PODCASTS; }
+        renderPodcasts(podcasts);
+      }
+
+      // --- Search ---
+      document.getElementById('podcastSearch').addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        if (!q) { renderPodcasts(podcasts); return; }
+        const filtered = podcasts.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          p.author.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)
+        );
+        renderPodcasts(filtered);
+      });
+
+      // --- JSON modal ---
+      document.getElementById('closeJsonModalBtn').addEventListener('click', function() {
+        document.getElementById('jsonModal').classList.remove('show');
+      });
+      document.getElementById('jsonModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('show');
+      });
+      document.getElementById('copyJsonBtn').addEventListener('click', function() {
+        const text = document.getElementById('jsonContent').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => { this.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+        });
+      });
+
+      loadPodcasts();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feeds - Soundwave Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-podcast"></i></div>
+        <div>
+          <h2>Soundwave</h2>
+          <small>Admin Panel</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="dashboard.html"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="feeds.html" class="active"><i class="fas fa-rss"></i><span>Feeds</span></a>
+        <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
+
+        <div class="nav-label">Monitoring</div>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
+        <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="breadcrumb">
+            <a href="dashboard.html"><i class="fas fa-home"></i></a>
+            <span>/</span>
+            <span>Feeds</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <span id="displayEmail">admin@soundwave.com</span>
+            <div class="user-avatar">A</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-title">
+          <span><i class="fas fa-rss" style="margin-right:10px;color:var(--accent);"></i>Feed Manager</span>
+          <div class="actions">
+            <a href="add-feed.html" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Feed</a>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="filter-tabs" id="filterTabs">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="active">Active</button>
+              <button class="filter-tab" data-filter="failed">Failed</button>
+              <button class="filter-tab" data-filter="pending">Pending</button>
+            </div>
+            <div class="section-actions">
+              <input type="text" id="feedSearch" placeholder="Search feeds..." style="padding:7px 14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);outline:none;" />
+            </div>
+          </div>
+          <div class="section-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feed Name</th>
+                  <th>URL</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Last Fetched</th>
+                  <th>Episodes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="feedsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading feeds...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <footer class="admin-footer">
+        &copy; 2026 Soundwave Admin v1.0 &mdash; Podcast Management System
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('admin_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
+      document.getElementById('displayEmail').textContent = email;
+      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
+
+      document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_email');
+        window.location.href = 'login.html';
+      });
+
+      // --- Sample feeds data ---
+      const SAMPLE_FEEDS = [
+        { id: 1, name: 'Tech Frontier Daily', url: 'https://techfrontier.com/rss', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:15', episodes: 342 },
+        { id: 2, name: 'Deep Dives Podcast', url: 'https://deepdives.fm/feed.xml', category: 'Science', status: 'active', last_fetched: '2026-06-07 08:45', episodes: 156 },
+        { id: 3, name: 'Code & Coffee', url: 'https://codeandcoffee.dev/rss', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:00', episodes: 210 },
+        { id: 4, name: 'Startup Stories', url: 'https://startupstories.co/feed', category: 'Business', status: 'failed', last_fetched: '2026-06-06 14:30', episodes: 89 },
+        { id: 5, name: 'Data Driven Weekly', url: 'https://datadriven.io/episodes/rss', category: 'Science', status: 'active', last_fetched: '2026-06-07 07:30', episodes: 278 },
+        { id: 6, name: 'AI Revolution', url: 'https://airevolution.ai/rss.xml', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:10', episodes: 195 },
+        { id: 7, name: 'The Creative Block', url: 'https://creativeblock.show/rss', category: 'Arts', status: 'pending', last_fetched: '—', episodes: 0 },
+        { id: 8, name: 'Laugh Track', url: 'https://laughtrackpod.com/feed', category: 'Comedy', status: 'active', last_fetched: '2026-06-07 06:00', episodes: 412 },
+        { id: 9, name: 'EduCast', url: 'https://educast.org/rss', category: 'Education', status: 'failed', last_fetched: '2026-06-05 22:00', episodes: 67 },
+        { id: 10, name: 'Soundwave Sessions', url: 'https://soundwave.fm/feed', category: 'Music', status: 'active', last_fetched: '2026-06-07 08:00', episodes: 520 },
+        { id: 11, name: 'Health & Wellness Hub', url: 'https://hwhub.com/podcast.xml', category: 'Science', status: 'pending', last_fetched: '—', episodes: 0 },
+        { id: 12, name: 'Game On Podcast', url: 'https://gameon.gg/feed', category: 'Technology', status: 'active', last_fetched: '2026-06-07 05:30', episodes: 634 }
+      ];
+
+      let feeds = [];
+      let currentFilter = 'all';
+      let searchQuery = '';
+
+      function renderFeeds() {
+        const tbody = document.getElementById('feedsTableBody');
+        let filtered = feeds;
+
+        if (currentFilter !== 'all') {
+          filtered = filtered.filter(f => f.status === currentFilter);
+        }
+
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter(f =>
+            f.name.toLowerCase().includes(q) ||
+            f.url.toLowerCase().includes(q) ||
+            f.category.toLowerCase().includes(q)
+          );
+        }
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">No feeds found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(feed => `
+          <tr data-status="${feed.status}">
+            <td><strong>${feed.name}</strong></td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${feed.url}">
+              ${feed.url}
+            </td>
+            <td><span style="color:var(--text-secondary);font-size:13px;">${feed.category}</span></td>
+            <td><span class="badge badge-${feed.status}">${feed.status}</span></td>
+            <td style="font-size:13px;color:var(--text-secondary);">${feed.last_fetched}</td>
+            <td>${feed.episodes}</td>
+            <td class="cell-actions">
+              <button class="btn btn-sm btn-info fetch-btn" data-id="${feed.id}"><i class="fas fa-sync-alt"></i> Fetch</button>
+              <button class="btn btn-sm btn-danger delete-btn" data-id="${feed.id}"><i class="fas fa-trash"></i> Delete</button>
+            </td>
+          </tr>
+        `).join('');
+
+        // Bind fetch buttons
+        document.querySelectorAll('.fetch-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+            try {
+              const res = await fetch('/api/admin/feeds/fetch/' + id, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+              });
+              const data = await res.json();
+              showToast(data.message || 'Fetch triggered!', 'success');
+            } catch (err) {
+              showToast('Fetch triggered (mock)', 'success');
+            }
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-sync-alt"></i> Fetch';
+          });
+        });
+
+        // Bind delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            if (!confirm('Delete this feed?')) return;
+            const id = this.dataset.id;
+            try {
+              const res = await fetch('/api/admin/feeds/delete/' + id, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+              });
+              const data = await res.json();
+              feeds = feeds.filter(f => f.id != id);
+              renderFeeds();
+              showToast(data.message || 'Feed deleted!', 'success');
+            } catch (err) {
+              feeds = feeds.filter(f => f.id != id);
+              renderFeeds();
+              showToast('Feed removed (mock)', 'success');
+            }
+          });
+        });
+      }
+
+      // --- Load feeds ---
+      async function loadFeeds() {
+        try {
+          const res = await fetch('/api/admin/feeds', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) {
+            feeds = await res.json();
+          } else {
+            feeds = SAMPLE_FEEDS;
+          }
+        } catch (err) {
+          feeds = SAMPLE_FEEDS;
+        }
+        renderFeeds();
+      }
+
+      // --- Filter tabs ---
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          currentFilter = this.dataset.filter;
+          renderFeeds();
+        });
+      });
+
+      // --- Search ---
+      document.getElementById('feedSearch').addEventListener('input', function() {
+        searchQuery = this.value;
+        renderFeeds();
+      });
+
+      // --- Toast ---
+      function showToast(message, type) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type + ' show';
+        const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle';
+        toast.innerHTML = '<i class="fas ' + icon + '"></i> ' + message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+      }
+
+      loadFeeds();
+    })();
+  </script>
+</body>
+</html>
