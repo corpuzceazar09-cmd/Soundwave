@@ -1,29 +1,3 @@
-﻿# Heavy dependencies
-node_modules/
-
-# Build output
-dist/
-
-# Environment & secrets
-.env
-.env.local
-
-# Cache & operational artifacts
-.index/
-.openindex/
-.playwright-mcp/
-.expo/
-*.log
-
-# Session artifacts
-.omo/run-continuation/
-thoughts/ledgers/CONTINUITY_*.md
-
-# AI/IDE config (not project source)
-.agents/
-.claude/
-.vscode/
-
-# OS
+﻿# OS files only
 .DS_Store
 Thumbs.db

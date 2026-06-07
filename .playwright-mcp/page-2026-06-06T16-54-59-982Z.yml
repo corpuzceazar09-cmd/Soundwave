@@ -1,0 +1,28 @@
+- generic [ref=e44]:
+  - generic [ref=e45]:
+    - generic [ref=e46]: 🎙️
+    - generic [ref=e47]: PodcastAdmin
+    - generic [ref=e48]: Editorial Control Suite v2.4.0
+  - generic [ref=e49]:
+    - generic [ref=e50]: Secure Access
+    - generic [ref=e51]: Please enter your credentials to access the analytics engine.
+    - generic [ref=e52]:
+      - generic [ref=e53]: Email Address
+      - textbox "sample@podcastengine.com" [ref=e54]
+      - generic [ref=e75]: Invalid email address
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]: Password
+        - generic [ref=e59] [cursor=pointer]: Forgot password?
+      - textbox "••••••••••••" [ref=e60]
+      - generic [ref=e76]: Password must be at least 8 characters
+    - generic [ref=e62] [cursor=pointer]: Access Admin Console
+    - generic [ref=e64]:
+      - generic [ref=e65]: SYSTEM STATUS
+      - generic [ref=e68]: All Nodes Operational
+  - generic [ref=e69]:
+    - generic [ref=e70]:
+      - generic [ref=e71]: Help Center
+      - generic [ref=e72]: Security Policy
+      - generic [ref=e73]: Terms of Service
+    - generic [ref=e74]: © 2024 PodcastAdmin Editorial Control Suite. v2.4.0-stable

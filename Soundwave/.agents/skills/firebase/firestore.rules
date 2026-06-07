@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public User Policies
+    match /users/{userId} {
+      // Public users can only read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public content (e.g., published podcasts)
+    match /public_content/{document=**} {
+      // Anyone can read public content
+      allow read: if true;
+      // Only admins (checked via custom claims) can write
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}
