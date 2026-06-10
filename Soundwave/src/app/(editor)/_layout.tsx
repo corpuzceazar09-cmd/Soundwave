@@ -114,8 +114,9 @@ function EditorLayoutInner() {
                 key={item.route}
                 style={[
                   styles.navItem,
-                  { borderLeftColor: 'transparent' },
-                  active && { backgroundColor: colors.sidebarActive, borderLeftColor: colors.sidebarActiveBorder },
+                  active
+                    ? { backgroundColor: colors.sidebarActive, borderLeftColor: colors.sidebarActiveBorder, borderLeftWidth: 3 }
+                    : { borderLeftWidth: 0 },
                 ]}
                 onPress={() => navigate(item.route)}
               >
@@ -220,9 +221,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     marginBottom: 4,
-    borderLeftWidth: 3,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
   },
   navIcon: {
     width: 24,
