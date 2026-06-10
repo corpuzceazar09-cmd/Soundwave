@@ -9,12 +9,16 @@ type DashboardStats = {
   failedJobs: number;
   activeFeeds: number;
   pendingFeeds: number;
+  weeklyListens: number;
+  uniqueListeners: number;
+  editorPublishedThisWeek: number;
 };
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalPodcasts: 0, totalEpisodes: 0, failedJobs: 0, activeFeeds: 0, pendingFeeds: 0,
+    weeklyListens: 0, uniqueListeners: 0, editorPublishedThisWeek: 0,
   });
   const [recentJobs, setRecentJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +40,38 @@ export default function DashboardScreen() {
         const activeFeeds = feeds.filter(f => f.status === 'active').length;
         const pendingFeeds = feeds.filter(f => f.status === 'pending').length;
 
-        setStats({ totalPodcasts, totalEpisodes, failedJobs, activeFeeds, pendingFeeds });
+        // Listener activity (last 7 days)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { count: weeklyListens } = await supabase
+          .from('user_activity')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', sevenDaysAgo);
+
+        // Unique listeners (from distinct user_id)
+        let uniqueListeners = 0;
+        if (weeklyListens && weeklyListens > 0) {
+          const { data: activeUsers } = await supabase
+            .from('user_activity')
+            .select('user_id')
+            .gte('created_at', sevenDaysAgo);
+          if (activeUsers) {
+            uniqueListeners = new Set(activeUsers.map(u => u.user_id)).size;
+          }
+        }
+
+        // Editor activity (non-blocking — Editor API may be unavailable)
+        let editorPublishedThisWeek = 0;
+        try {
+          const editorRes = await fetch('http://localhost:8080/api/editor/stats');
+          if (editorRes.ok) {
+            const editorData = await editorRes.json();
+            editorPublishedThisWeek = editorData.publishedThisWeek || 0;
+          }
+        } catch (_) {
+          // Editor server unavailable — non-blocking
+        }
+
+        setStats({ totalPodcasts, totalEpisodes, failedJobs, activeFeeds, pendingFeeds, weeklyListens, uniqueListeners, editorPublishedThisWeek });
         setRecentJobs(jobsRes.data ?? []);
       } catch (err) {
         console.error('Dashboard fetch error:', err);
@@ -95,6 +130,20 @@ export default function DashboardScreen() {
             Active · {stats.pendingFeeds} pending
           </Text>
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statTitle}>LISTENER ACTIVITY</Text>
+          <Text style={styles.statValue}>{stats.weeklyListens}</Text>
+          <Text style={{ fontSize: 12, color: '#64748B' }}>
+            {stats.uniqueListeners} unique this week
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statTitle}>EDITOR ACTIVITY</Text>
+          <Text style={styles.statValue}>{stats.editorPublishedThisWeek}</Text>
+          <Text style={{ fontSize: 12, color: '#64748B' }}>
+            Published this week via Editor API
+          </Text>
+        </View>
       </View>
 
       {/* Quick Actions */}
@@ -122,6 +171,14 @@ export default function DashboardScreen() {
           <Text style={styles.quickActionIcon}>🗃️</Text>
           <Text style={styles.quickActionTitle}>Raw Data</Text>
           <Text style={styles.quickActionDesc}>Browse raw podcast data</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={() => router.push('/(admin)/analytics' as any)}
+        >
+          <Text style={styles.quickActionIcon}>📊</Text>
+          <Text style={styles.quickActionTitle}>Analytics</Text>
+          <Text style={styles.quickActionDesc}>Detailed cross-database reports</Text>
         </TouchableOpacity>
       </View>
 
