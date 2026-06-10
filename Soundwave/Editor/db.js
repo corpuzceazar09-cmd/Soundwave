@@ -1,21 +1,49 @@
-const { MongoClient } = require('mongodb');
-require('dotenv').config({ path: '../.env' }); // Assuming server is run from Editor/
+const { createClient } = require('@supabase/supabase-js');
+const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/soundwave_editor";
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-const client = new MongoClient(uri);
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env");
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function connectToDatabase() {
   try {
-    await client.connect();
-    console.log("✅ Successfully connected to MongoDB for Editor DB");
-    const db = client.db('soundwave_editor');
-    return db;
+    // Verify connection by fetching a single row
+    const { error } = await supabase.from('categories').select('id').limit(1);
+    if (error) throw error;
+    console.log("✅ Successfully connected to Supabase for Editor DB");
+    return supabase;
   } catch (error) {
-    console.error("❌ Failed to connect to MongoDB:", error.message);
+    console.error("❌ Failed to connect to Supabase:", error.message);
     console.log("⚠️ Starting server without DB connection. Server will run with limited functionality.");
     return null;
   }
 }
 
-module.exports = { connectToDatabase, client };
+let mongoConnected = false;
+
+async function connectMongo() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.log('⚠️  MONGODB_URI not set — MongoDB features disabled');
+    return null;
+  }
+  try {
+    await mongoose.connect(uri);
+    mongoConnected = true;
+    console.log('✅ Connected to MongoDB');
+    return mongoose.connection;
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err.message);
+    return null;
+  }
+}
+
+module.exports = { connectToDatabase, connectMongo, mongoConnected };
