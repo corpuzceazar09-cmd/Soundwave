@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -851,6 +852,15 @@ async function startServer() {
     }
   } catch (err) {
     console.log(`⚠️  Editor auth check skipped: ${err.message}`);
+  }
+
+  // Attempt MongoDB connection
+  if (process.env.MONGODB_URI) {
+    mongoose.connect(process.env.MONGODB_URI)
+      .then(() => console.log('✅ Connected to MongoDB'))
+      .catch(err => console.log(`⚠️  MongoDB connection failed: ${err.message} — editorial history features disabled`));
+  } else {
+    console.log('⚠️  MONGODB_URI not set — MongoDB features disabled');
   }
 
   app.listen(PORT, () => {
