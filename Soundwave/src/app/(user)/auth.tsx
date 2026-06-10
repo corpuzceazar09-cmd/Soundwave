@@ -8,7 +8,12 @@ import {
   ScrollView,
   Platform,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserProfile } from '@/lib/firestoreApi';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,15 +40,50 @@ export default function UserAuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
-  const handleLogin = () => {
-    // TODO: Wire up Firebase authentication
-    router.replace('/(user)' as any);
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      Alert.alert('Validation', 'Email and password are required');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      router.replace('/(user)');
+    } catch (err: any) {
+      Alert.alert('Sign In Error', err.message || 'Failed to sign in');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const handleSignUp = () => {
-    // TODO: Wire up Firebase authentication
-    router.replace('/(user)' as any);
+  const handleSignUp = async () => {
+    if (!signupEmail || !signupPassword || !confirmPassword) {
+      Alert.alert('Validation', 'All fields are required');
+      return;
+    }
+    if (signupPassword !== confirmPassword) {
+      Alert.alert('Validation', 'Passwords do not match');
+      return;
+    }
+    if (signupPassword.length < 6) {
+      Alert.alert('Validation', 'Password must be at least 6 characters');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+      await createUserProfile(cred.user.uid, {
+        displayName: fullName || signupEmail.split('@')[0],
+        email: signupEmail,
+      });
+      router.replace('/(user)');
+    } catch (err: any) {
+      Alert.alert('Sign Up Error', err.message || 'Failed to create account');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const renderLeftPanel = () => (
@@ -138,8 +178,16 @@ export default function UserAuthScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-        <Text style={styles.primaryButtonText}>Sign In</Text>
+      <TouchableOpacity
+        style={[styles.primaryButton, authLoading && styles.primaryButtonDisabled]}
+        onPress={handleLogin}
+        disabled={authLoading}
+      >
+        {authLoading ? (
+          <ActivityIndicator size="small" color="#0F172A" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Sign In</Text>
+        )}
       </TouchableOpacity>
     </>
   );
@@ -215,8 +263,16 @@ export default function UserAuthScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleSignUp}>
-        <Text style={styles.primaryButtonText}>Create Account</Text>
+      <TouchableOpacity
+        style={[styles.primaryButton, authLoading && styles.primaryButtonDisabled]}
+        onPress={handleSignUp}
+        disabled={authLoading}
+      >
+        {authLoading ? (
+          <ActivityIndicator size="small" color="#0F172A" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Create Account</Text>
+        )}
       </TouchableOpacity>
     </>
   );
@@ -527,6 +583,9 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 16,
     fontWeight: '700',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   divider: {
     flexDirection: 'row',
