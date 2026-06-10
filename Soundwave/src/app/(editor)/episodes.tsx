@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { updateEpisodeStatus } from '@/lib/editorApi';
 import { useEditorTheme } from '@/contexts/EditorThemeContext';
 import { EditorThemeColors } from '@/constants/EditorTheme';
 
@@ -72,11 +73,7 @@ export default function EpisodesPage() {
           onPress: async () => {
             setActionLoading(episode.id);
             try {
-              const { error } = await supabase
-                .from('episodes')
-                .update({ status: newStatus })
-                .eq('id', episode.id);
-              if (error) throw error;
+              await updateEpisodeStatus(episode.id, newStatus);
               setEpisodes(prev =>
                 prev.map(e => e.id === episode.id ? { ...e, status: newStatus } : e)
               );

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { getEditorStats, EditorStats } from '@/lib/editorApi';
 import { useEditorTheme } from '@/contexts/EditorThemeContext';
 import { EditorThemeColors } from '@/constants/EditorTheme';
 
@@ -29,6 +30,7 @@ export default function EditorDashboard() {
   });
   const [podcasts, setPodcasts] = useState<PodcastWithCount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editorStats, setEditorStats] = useState<EditorStats>({ totalActions: 0, publishedThisWeek: 0, pendingReviews: 0, recentActions: [] });
 
   const fetchData = useCallback(async () => {
     try {
@@ -82,6 +84,14 @@ export default function EditorDashboard() {
           latest_episode: episodeCounts[p.id]?.latest ?? null,
         }))
       );
+
+      // Editor stats from MongoDB (non-blocking)
+      try {
+        const stats = await getEditorStats();
+        setEditorStats(stats);
+      } catch (_) {
+        // Editor API unavailable — non-blocking
+      }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
     } finally {
@@ -135,6 +145,20 @@ export default function EditorDashboard() {
           <Text style={styles.statTitle}>PUBLISHED</Text>
           <Text style={styles.statValue}>{stats.publishedEpisodes}</Text>
           <Text style={styles.statSubtext}>Live episodes</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statTitle}>PUBLISHED THIS WEEK</Text>
+          <Text style={styles.statValue}>{editorStats.publishedThisWeek}</Text>
+          <Text style={styles.statSubtext}>Editor actions</Text>
+        </View>
+        <View style={[styles.statCard, editorStats.pendingReviews > 0 && styles.statCardWarning]}>
+          <Text style={[styles.statTitle, editorStats.pendingReviews > 0 && { color: colors.warning }]}>
+            PENDING REVIEWS
+          </Text>
+          <Text style={[styles.statValue, editorStats.pendingReviews > 0 && { color: colors.warning }]}>
+            {editorStats.pendingReviews}
+          </Text>
+          <Text style={styles.statSubtext}>Actions awaiting review</Text>
         </View>
       </View>
 

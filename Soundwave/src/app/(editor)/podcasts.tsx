@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { updatePodcast, toggleFeatured } from '@/lib/editorApi';
 import { useEditorTheme } from '@/contexts/EditorThemeContext';
 import { EditorThemeColors } from '@/constants/EditorTheme';
 
@@ -74,16 +75,12 @@ export default function PodcastsPage() {
     }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('podcasts')
-        .update({
-          title: editForm.title.trim(),
-          author: editForm.author.trim() || null,
-          description: editForm.description.trim() || null,
-          language: editForm.language.trim() || 'en',
-        })
-        .eq('id', editPodcast.id);
-      if (error) throw error;
+      await updatePodcast(editPodcast.id, {
+        title: editForm.title.trim(),
+        author: editForm.author.trim() || null,
+        description: editForm.description.trim() || null,
+        language: editForm.language.trim() || 'en',
+      });
       setPodcasts(prev =>
         prev.map(p => p.id === editPodcast.id ? { ...p, ...editForm, author: editForm.author.trim() || null, description: editForm.description.trim() || null, language: editForm.language.trim() || 'en' } : p)
       );
@@ -109,11 +106,7 @@ export default function PodcastsPage() {
           text: 'Confirm', style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('podcasts')
-                .update({ featured: newFeatured })
-                .eq('id', podcast.id);
-              if (error) throw error;
+              await toggleFeatured(podcast.id, newFeatured);
               setPodcasts(prev =>
                 prev.map(p => p.id === podcast.id ? { ...p, featured: newFeatured } : p)
               );

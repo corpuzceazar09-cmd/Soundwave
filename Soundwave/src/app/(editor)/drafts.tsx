@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { publishDraft, deleteDraft } from '@/lib/editorApi';
 import { useEditorTheme } from '@/contexts/EditorThemeContext';
 import { EditorThemeColors } from '@/constants/EditorTheme';
 
@@ -45,7 +46,7 @@ export default function DraftsPage() {
     useCallback(() => { fetchDrafts(); }, [fetchDrafts])
   );
 
-  const publishDraft = async (draft: DraftEpisode) => {
+  const handlePublishDraft = async (draft: DraftEpisode) => {
     Alert.alert(
       'Publish Episode',
       `Publish "${draft.title}"? It will be available to all listeners.`,
@@ -56,11 +57,7 @@ export default function DraftsPage() {
           onPress: async () => {
             setActionLoading(draft.id);
             try {
-              const { error } = await supabase
-                .from('episodes')
-                .update({ status: 'published' })
-                .eq('id', draft.id);
-              if (error) throw error;
+              await publishDraft(draft.id);
               setDrafts(prev => prev.filter(d => d.id !== draft.id));
               Alert.alert('Published', `"${draft.title}" is now live.`);
             } catch (err: any) {
@@ -74,7 +71,7 @@ export default function DraftsPage() {
     );
   };
 
-  const deleteDraft = async (draft: DraftEpisode) => {
+  const handleDeleteDraft = async (draft: DraftEpisode) => {
     Alert.alert(
       'Delete Draft',
       `Permanently delete "${draft.title}"? This cannot be undone.`,
@@ -85,11 +82,7 @@ export default function DraftsPage() {
           onPress: async () => {
             setActionLoading(draft.id);
             try {
-              const { error } = await supabase
-                .from('episodes')
-                .delete()
-                .eq('id', draft.id);
-              if (error) throw error;
+              await deleteDraft(draft.id);
               setDrafts(prev => prev.filter(d => d.id !== draft.id));
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to delete');
@@ -171,7 +164,7 @@ export default function DraftsPage() {
               <View style={styles.draftActions}>
                 <TouchableOpacity
                   style={styles.publishBtn}
-                  onPress={() => publishDraft(draft)}
+                  onPress={() => handlePublishDraft(draft)}
                   disabled={actionLoading === draft.id}
                 >
                   {actionLoading === draft.id ? (
@@ -182,7 +175,7 @@ export default function DraftsPage() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteBtn}
-                  onPress={() => deleteDraft(draft)}
+                  onPress={() => handleDeleteDraft(draft)}
                   disabled={actionLoading === draft.id}
                 >
                   <Text style={styles.deleteBtnText}>Delete</Text>
