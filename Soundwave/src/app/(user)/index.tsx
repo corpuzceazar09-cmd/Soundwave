@@ -1,75 +1,97 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const TRENDING = [
-  { title: 'Crime Junkie', color: '#1E293B', icon: 'flame' },
-  { title: 'The Daily', color: '#1E3A5F', icon: 'newspaper' },
-  { title: 'SmartLess', color: '#3B1F2E', icon: 'chatbubbles' },
-  { title: 'Huberman Lab', color: '#1F3B2E', icon: 'fitness' },
-];
-
-const CATEGORIES = [
-  { label: 'True Crime', color: '#DC2626' },
-  { label: 'Science', color: '#2563EB' },
-  { label: 'Comedy', color: '#D97706' },
-  { label: 'Technology', color: '#059669' },
-  { label: 'Business', color: '#7C3AED' },
-  { label: 'Health', color: '#DB2777' },
-];
+import { supabase } from '@/lib/supabase';
 
 export default function UserHomeScreen() {
-  const renderFeaturedBanner = () => (
-    <LinearGradient
-      colors={['#1E293B', '#0F172A']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.featuredCard}
-    >
-      <View style={styles.featuredContent}>
-        <View style={styles.featuredBadge}>
-          <Ionicons name="sparkles" size={12} color="#FBBF24" />
-          <Text style={styles.featuredBadgeText}>FEATURED</Text>
+  const [featured, setFeatured] = useState<any>(null);
+  const [trending, setTrending] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [featuredRes, episodesRes, categoriesRes] = await Promise.all([
+          supabase.from('podcasts').select('*').eq('featured', true).limit(1).maybeSingle(),
+          supabase.from('episodes')
+            .select('*, podcasts!inner(title, author, image_url)')
+            .eq('status', 'published')
+            .order('published_at', { ascending: false })
+            .limit(5),
+          supabase.from('categories').select('*').order('name'),
+        ]);
+        if (featuredRes.data) setFeatured(featuredRes.data);
+        setTrending(episodesRes.data || []);
+        setCategories(categoriesRes.data || []);
+      } catch (err) {
+        console.error('Home fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const renderFeaturedBanner = () => {
+    if (!featured) return null;
+    return (
+      <LinearGradient
+        colors={['#1E293B', '#0F172A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.featuredCard}
+      >
+        <View style={styles.featuredContent}>
+          <View style={styles.featuredBadge}>
+            <Ionicons name="sparkles" size={12} color="#FBBF24" />
+            <Text style={styles.featuredBadgeText}>FEATURED</Text>
+          </View>
+          <Text style={styles.featuredTitle}>{featured.title || 'Featured Podcast'}</Text>
+          {featured.author && (
+            <Text style={styles.featuredHost}>with {featured.author}</Text>
+          )}
+          {featured.description && (
+            <Text style={styles.featuredDesc} numberOfLines={2}>{featured.description}</Text>
+          )}
+          <TouchableOpacity style={styles.listenButton}>
+            <Ionicons name="play" size={18} color="#0F172A" />
+            <Text style={styles.listenButtonText}>Listen Now</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.featuredTitle}>THE DAILY DRIVE</Text>
-        <Text style={styles.featuredHost}>with John Smith</Text>
-        <Text style={styles.featuredDesc}>
-          Navigating tomorrow's tech landscape — one conversation at a time.
-        </Text>
-        <TouchableOpacity style={styles.listenButton}>
-          <Ionicons name="play" size={18} color="#0F172A" />
-          <Text style={styles.listenButtonText}>Listen Now</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.featuredGraphic}>
-        <Ionicons name="mic-circle" size={120} color="rgba(56, 189, 248, 0.15)" />
-      </View>
-    </LinearGradient>
-  );
+        <View style={styles.featuredGraphic}>
+          <Ionicons name="mic-circle" size={120} color="rgba(56, 189, 248, 0.15)" />
+        </View>
+      </LinearGradient>
+    );
+  };
 
   const renderTrendingRow = () => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Trending Now</Text>
+        <Text style={styles.sectionTitle}>Latest Episodes</Text>
         <TouchableOpacity>
           <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingRow}>
-        {TRENDING.map((item) => (
-          <TouchableOpacity key={item.title} style={styles.trendingCard}>
-            <View style={[styles.trendingIconBg, { backgroundColor: item.color }]}>
-              <Ionicons name={item.icon as any} size={28} color="#FFFFFF" />
+        {trending.map((ep: any) => (
+          <TouchableOpacity key={ep.id} style={styles.trendingCard}>
+            <View style={[styles.trendingIconBg, { backgroundColor: '#1E293B' }]}>
+              <Ionicons name="musical-note" size={28} color="#FFFFFF" />
             </View>
-            <Text style={styles.trendingTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.trendingEpisodes}>24 episodes</Text>
+            <Text style={styles.trendingTitle} numberOfLines={1}>{ep.title}</Text>
+            <Text style={styles.trendingEpisodes} numberOfLines={1}>
+              {ep.podcasts?.title || 'Unknown Podcast'}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -85,15 +107,23 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity key={cat.label} style={styles.categoryCard}>
-            <View style={[styles.categoryAccent, { backgroundColor: cat.color }]} />
-            <Text style={styles.categoryLabel}>{cat.label}</Text>
+        {categories.map((cat: any) => (
+          <TouchableOpacity key={cat.id || cat.name} style={styles.categoryCard}>
+            <View style={[styles.categoryAccent, { backgroundColor: '#2563EB' }]} />
+            <Text style={styles.categoryLabel}>{cat.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
