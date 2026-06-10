@@ -9,6 +9,7 @@
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -40,6 +41,10 @@
           <i class="fa-solid fa-microphone"></i>
           Episodes
         </a>
+        <a href="/podcasts" class="nav-item">
+          <i class="fa-solid fa-podcast"></i>
+          Podcasts
+        </a>
         <a href="/dashboard" class="nav-item">
           <i class="fa-solid fa-globe"></i>
           Content Browser
@@ -51,15 +56,15 @@
       </nav>
 
       <div class="sidebar-bottom">
+        <div class="sidebar-user" id="sidebarUser" style="display:none;padding:0.75rem 1.5rem;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:0.75rem;font-size:0.75rem;color:rgba(203,213,225,0.7);">
+          <div id="sidebarEmail" style="font-weight:600;color:white;font-size:0.8125rem;"></div>
+          <div id="sidebarRole" style="text-transform:uppercase;letter-spacing:0.05em;"></div>
+        </div>
         <button class="btn-primary w-full">Create New Collection</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link">
-            <i class="fa-regular fa-circle-question"></i>
-            Help Center
-          </a>
-          <a href="#" class="bottom-link">
-            <i class="fa-solid fa-chart-line"></i>
-            System Status
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
           </a>
         </div>
       </div>
@@ -296,6 +301,17 @@
   </div>
 <script>
 (function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var bold=i.querySelector('b'),cur=bold?parseInt(bold.textContent)||1:1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var m=parseInt(e.textContent.trim());if(!isNaN(m))e.classList.toggle('active',m===n)});if(bold)bold.textContent=n}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
+<script>
+  (function() {
+    const email = localStorage.getItem('editor_email');
+    const role = localStorage.getItem('editor_role');
+    if (email) {
+      document.getElementById('sidebarEmail').textContent = email;
+      document.getElementById('sidebarRole').textContent = role || 'Editor';
+      document.getElementById('sidebarUser').style.display = 'block';
+    }
+  })();
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SoundWave - Profile</title>
+  <title>SoundWave - Subscriptions</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="auth.js"></script>
   <style>
@@ -23,41 +23,38 @@
     .topbar { height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; background: #fff; border-bottom: 1px solid #E2E8F0; position: sticky; top: 0; z-index: 50; }
     .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #38BDF8, #818CF8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; margin-left: 4px; }
     .content { flex: 1; padding: 28px 32px 32px; overflow-y: auto; }
-    .content h1 { font-size: 28px; font-weight: 900; }
-    /* Profile Header */
-    .profile-header { display: flex; align-items: center; gap: 24px; margin-bottom: 32px; padding-bottom: 28px; border-bottom: 1px solid #E2E8F0; }
-    .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #38BDF8, #818CF8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32px; font-weight: 800; flex-shrink: 0; overflow: hidden; }
-    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .profile-info h2 { font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 4px; }
-    .profile-info .email { font-size: 14px; color: #64748B; font-weight: 500; }
-    /* Tabs */
-    .profile-tabs { display: flex; gap: 0; border-bottom: 2px solid #E2E8F0; margin-bottom: 24px; }
-    .profile-tab { padding: 12px 24px; font-size: 14px; font-weight: 600; color: #64748B; cursor: pointer; border: none; background: transparent; font-family: inherit; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
-    .profile-tab:hover { color: #0F172A; }
-    .profile-tab.active { color: #38BDF8; border-bottom-color: #38BDF8; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    /* Activity list */
-    .activity-list { display: flex; flex-direction: column; gap: 8px; }
-    .activity-item { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 12px; transition: background 0.15s; }
-    .activity-item:hover { background: #F1F5F9; }
-    .activity-icon { width: 40px; height: 40px; border-radius: 10px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .activity-info { flex: 1; min-width: 0; }
-    .activity-info .act-title { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .activity-info .act-meta { font-size: 12px; color: #64748B; font-weight: 500; }
-    /* Podcast cards */
-    .podcast-grid { display: flex; flex-wrap: wrap; gap: 20px; }
-    .podcast-card { width: 180px; cursor: pointer; transition: transform 0.15s; }
-    .podcast-card:hover { transform: translateY(-4px); }
-    .podcast-cover { width: 180px; height: 180px; border-radius: 14px; margin-bottom: 12px; position: relative; overflow: hidden; }
-    .podcast-cover .cover-bg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .page-header h1 { font-size: 28px; font-weight: 900; }
+    .sort-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; border: none; background: #F1F5F9; color: #64748B; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .sort-btn:hover { background: #E2E8F0; }
+    .section { margin-bottom: 32px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-header h2 { font-size: 20px; font-weight: 800; }
+    .section-header .count { font-size: 13px; color: #94A3B8; font-weight: 500; }
+    .section-header a { font-size: 14px; font-weight: 600; color: #38BDF8; text-decoration: none; }
+    .section-header a:hover { color: #0EA5E9; }
+    .release-list { display: flex; flex-direction: column; gap: 8px; }
+    .release-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; cursor: pointer; transition: background 0.15s; border: 1px solid #F1F5F9; background: #fff; }
+    .release-row:hover { background: #F8FAFC; }
+    .release-icon { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(56,189,248,0.1); }
+    .release-info { flex: 1; min-width: 0; }
+    .release-info .r-title { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .release-info .r-meta { font-size: 12px; color: #64748B; font-weight: 500; }
+    .release-date { font-size: 12px; color: #94A3B8; white-space: nowrap; }
+    .sub-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+    .sub-card { width: 180px; cursor: pointer; transition: transform 0.15s; }
+    .sub-card:hover { transform: translateY(-4px); }
+    .sub-cover { width: 180px; height: 180px; border-radius: 14px; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .sub-cover .cover-bg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
     .cover-play-overlay { position: absolute; bottom: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: #38BDF8; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(6px); transition: all 0.2s; box-shadow: 0 4px 12px rgba(56,189,248,0.4); }
-    .podcast-card:hover .cover-play-overlay { opacity: 1; transform: translateY(0); }
-    .podcast-title { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .podcast-author { font-size: 12px; color: #64748B; font-weight: 500; }
+    .sub-card:hover .cover-play-overlay { opacity: 1; transform: translateY(0); }
+    .sub-title { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-author { font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-meta { display: flex; align-items: center; gap: 8px; }
+    .sub-badge { background: rgba(56,189,248,0.1); padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; color: #38BDF8; }
+    .sub-episodes { font-size: 11px; color: #94A3B8; }
     .empty-state { text-align: center; padding: 60px 20px; color: #94A3B8; }
     .empty-state a { color: #38BDF8; text-decoration: none; font-weight: 600; }
-    .empty-state a:hover { text-decoration: underline; }
     /* Player bar */
     .player-bar { position: fixed; bottom: 0; left: var(--sidebar); right: 0; height: var(--player-h); background: #fff; border-top: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 24px; z-index: 100; }
     .player-track { display: flex; align-items: center; gap: 14px; width: 280px; }
@@ -76,7 +73,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-overlay p { font-size: 14px; color: #64748B; font-weight: 500; }
     /* Mobile */
-    @media (max-width: 768px) { .sidebar { display: none; } .main-area { margin-left: 0; } .player-bar { left: 0; } .content { padding: 20px 16px; } .profile-header { flex-direction: column; text-align: center; } .podcast-card { width: 150px; } .podcast-cover { width: 150px; height: 150px; } .mobile-nav { display: flex; position: fixed; bottom: var(--player-h); left: 0; right: 0; height: 56px; background: #fff; border-top: 1px solid #E2E8F0; z-index: 99; align-items: center; justify-content: space-around; padding: 0 8px; } }
+    @media (max-width: 768px) { .sidebar { display: none; } .main-area { margin-left: 0; } .player-bar { left: 0; } .content { padding: 20px 16px; } .sub-card { width: 150px; } .sub-cover { width: 150px; height: 150px; } .sub-grid { gap: 16px; } .mobile-nav { display: flex; position: fixed; bottom: var(--player-h); left: 0; right: 0; height: 56px; background: #fff; border-top: 1px solid #E2E8F0; z-index: 99; align-items: center; justify-content: space-around; padding: 0 8px; } }
     @media (min-width: 769px) { .mobile-nav { display: none; } }
     .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: 8px; border: none; background: transparent; cursor: pointer; color: #94A3B8; font-size: 10px; font-weight: 600; font-family: inherit; }
     .mobile-nav-item.active { color: #38BDF8; }
@@ -86,14 +83,13 @@
     .search-wrapper { display: flex; align-items: center; background: #F1F5F9; border-radius: 10px; padding: 0 14px; width: 320px; border: 1px solid transparent; }
     .search-wrapper:focus-within { border-color: #38BDF8; background: #fff; }
     .search-wrapper input { flex: 1; padding: 10px 10px; font-size: 14px; color: #0F172A; background: transparent; border: none; outline: none; font-family: inherit; }
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .section-header h2 { font-size: 20px; font-weight: 800; }
+    .search-wrapper input::placeholder { color: #94A3B8; }
   </style>
 </head>
 <body>
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
-    <p>Loading profile...</p>
+    <p>Loading subscriptions...</p>
   </div>
 
   <aside class="sidebar">
@@ -105,7 +101,7 @@
       <button class="nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
       <button class="nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Discover</button>
       <button class="nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-      <button class="nav-item" onclick="location.href='/subscriptions'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
+      <button class="nav-item active" onclick="location.href='/subscriptions'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
       <button class="nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
       <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
     </nav>
@@ -118,7 +114,7 @@
     <header class="topbar">
       <div class="search-wrapper">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" placeholder="Search..." id="topSearch" />
+        <input type="text" placeholder="Search subscriptions..." id="topSearch" />
       </div>
       <div class="topbar-icons">
         <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
@@ -127,38 +123,32 @@
     </header>
 
     <main class="content">
-      <!-- Profile Header -->
-      <div class="profile-header">
-        <div class="profile-avatar" id="profileAvatar">
-          <span id="avatarInitial">U</span>
-        </div>
-        <div class="profile-info">
-          <h2 id="profileName">User</h2>
-          <div class="email" id="profileEmail">user@example.com</div>
-        </div>
+      <div class="page-header">
+        <h1>Subscriptions</h1>
+        <button class="sort-btn" id="sortBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Sort</button>
       </div>
 
-      <!-- Tabs -->
-      <div class="profile-tabs">
-        <button class="profile-tab active" data-tab="history">History</button>
-        <button class="profile-tab" data-tab="subscriptions">Subscriptions</button>
-      </div>
-
-      <!-- History Tab -->
-      <div class="tab-content active" id="tabHistory">
-        <div class="section-header"><h2>Listening History</h2></div>
-        <div class="activity-list" id="historyList"></div>
-        <div class="empty-state" id="historyEmpty" style="display:none;">
-          <p>No listening history yet. <a href="/browse">Start exploring!</a></p>
+      <!-- New Releases -->
+      <div class="section">
+        <div class="section-header">
+          <h2>New Releases</h2>
+          <a href="#">See All</a>
+        </div>
+        <div class="release-list" id="newReleaseList"></div>
+        <div class="empty-state" id="releasesEmpty" style="display:none;">
+          <p>No new releases. <a href="/browse">Find more podcasts!</a></p>
         </div>
       </div>
 
-      <!-- Subscriptions Tab -->
-      <div class="tab-content" id="tabSubscriptions">
-        <div class="section-header"><h2>Subscribed Podcasts</h2></div>
-        <div class="podcast-grid" id="subscriptionsGrid"></div>
+      <!-- All Subscriptions -->
+      <div class="section">
+        <div class="section-header">
+          <h2>All Subscriptions</h2>
+          <span class="count" id="subCount">0 podcasts</span>
+        </div>
+        <div class="sub-grid" id="subscriptionsGrid"></div>
         <div class="empty-state" id="subsEmpty" style="display:none;">
-          <p>Not following any podcasts yet. <a href="/browse">Discover podcasts!</a></p>
+          <p>Not subscribed to any podcasts yet. <a href="/browse">Discover podcasts!</a></p>
         </div>
       </div>
     </main>
@@ -167,7 +157,7 @@
   <div class="player-bar">
     <div class="player-track">
       <div class="player-art"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg></div>
-      <div class="player-track-info"><div class="player-track-title">Your profile</div><div class="player-track-author">Manage your library</div></div>
+      <div class="player-track-info"><div class="player-track-title">Subscriptions</div><div class="player-track-author">Your followed podcasts</div></div>
     </div>
     <div class="player-controls">
       <button class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
@@ -190,6 +180,7 @@
 
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   function getTimeAgo(date) { if (!date) return ''; var sec = Math.floor((Date.now() - new Date(date)) / 1000); if (sec < 60) return 'just now'; var min = Math.floor(sec / 60); if (min < 60) return min + ' min ago'; var hr = Math.floor(min / 60); if (hr < 24) return hr + ' hour' + (hr > 1 ? 's' : '') + ' ago'; var d = Math.floor(hr / 24); return d + ' day' + (d > 1 ? 's' : '') + ' ago'; }
+  function formatDuration(dur) { if (!dur) return '0:00'; var parts = dur.split(':'); if (parts.length === 2) return dur; var totalSec = parseInt(dur, 10); if (isNaN(totalSec)) return '0:00'; var m = Math.floor(totalSec / 60); var s = totalSec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
 
   function initApp() {
     var user = PUBLIC_API.getUser();
@@ -198,98 +189,83 @@
   }
 
   function onReady(user) {
-    // Profile info
-    var name = user.display_name || 'User';
-    var email = user.email || '';
     var initial = (user.display_name || user.email || 'U')[0].toUpperCase();
-    document.getElementById('avatarInitial').textContent = initial;
     document.getElementById('userAvatar').textContent = initial;
-    document.getElementById('profileName').textContent = name;
-    document.getElementById('profileEmail').textContent = email;
-
-    if (user.photoURL) {
-      document.getElementById('avatarInitial').style.display = 'none';
-      document.getElementById('profileAvatar').innerHTML = '<img src="' + esc(user.photoURL) + '" alt="Avatar" />';
-    }
-
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
-
-    // Tab switching
-    document.querySelectorAll('.profile-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.profile-tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(tc) { tc.classList.remove('active'); });
-        tab.classList.add('active');
-        document.getElementById('tab' + tab.getAttribute('data-tab').charAt(0).toUpperCase() + tab.getAttribute('data-tab').slice(1)).classList.add('active');
-      });
-    });
-
-    // Load data
-    loadHistory();
-    loadSubscriptions();
 
     document.getElementById('topSearch').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && this.value.trim().length >= 3) {
         window.location.href = '/browse?q=' + encodeURIComponent(this.value.trim());
       }
     });
-  }
 
-  async function loadHistory(uid) {
-    try {
-      var json = await PUBLIC_API.get('/api/activity');
-      var list = json.data || [];
-      var container = document.getElementById('historyList');
-      var empty = document.getElementById('historyEmpty');
-
-      if (list.length === 0) {
-        container.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-      }
-      empty.style.display = 'none';
-      list.forEach(function(item) {
-        var epTitle = (item.episodes && item.episodes.title) || 'Episode';
-        var podcastTitle = (item.podcasts && item.podcasts.title) || 'Podcast';
-        container.innerHTML +=
-          '<div class="activity-item">' +
-            '<div class="activity-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div>' +
-            '<div class="activity-info">' +
-              '<div class="act-title">' + esc(epTitle) + '</div>' +
-              '<div class="act-meta">' + esc(podcastTitle) + ' \u00B7 ' + getTimeAgo(item.created_at) + '</div>' +
-            '</div>' +
-          '</div>';
-      });
-    } catch (e) { console.warn('[History]', e); }
+    loadSubscriptions();
+    loadNewReleases();
   }
 
   async function loadSubscriptions() {
     try {
-      var resp = await PUBLIC_API.get('/api/follows');
-      var json = await resp.json();
+      var json = await PUBLIC_API.get('/api/follows');
       var list = json.data || [];
-      var grid = document.getElementById('subscriptionsGrid');
+      var container = document.getElementById('subscriptionsGrid');
       var empty = document.getElementById('subsEmpty');
 
-      if (list.length === 0) {
-        grid.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-      }
+      document.getElementById('subCount').textContent = list.length + ' podcast' + (list.length !== 1 ? 's' : '');
+
+      if (list.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
+
       list.forEach(function(p) {
         var idx = (p.id || '').split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % gradients.length;
-        grid.innerHTML +=
-          '<div class="podcast-card" onclick="location.href=\'/podcast?id=' + encodeURIComponent(p.id) + '\'">' +
-            '<div class="podcast-cover"><div class="cover-bg" style="background:linear-gradient(135deg,' + gradients[idx] + ');">' +
-              '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>' +
-            '</div><div class="cover-play-overlay"><svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div>' +
-            '<div class="podcast-title">' + esc(p.title) + '</div>' +
-            '<div class="podcast-author">' + esc(p.author || '') + '</div>' +
+        var category = p.category || 'Podcast';
+        var episodes = p.episodes_count || '0';
+        container.innerHTML +=
+          '<div class="sub-card" onclick="location.href=\'/podcast?id=' + encodeURIComponent(p.id) + '\'">' +
+            '<div class="sub-cover">' +
+              '<div class="cover-bg" style="background:linear-gradient(135deg,' + gradients[idx] + ');">' +
+                '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5">' +
+                  '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>' +
+                '</svg>' +
+              '</div>' +
+              '<div class="cover-play-overlay"><svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div>' +
+            '</div>' +
+            '<div class="sub-title">' + esc(p.title) + '</div>' +
+            '<div class="sub-author">' + esc(p.author || '') + '</div>' +
+            '<div class="sub-meta">' +
+              '<span class="sub-badge">' + esc(category) + '</span>' +
+              '<span class="sub-episodes">' + episodes + ' ep.</span>' +
+            '</div>' +
           '</div>';
       });
     } catch (e) { console.warn('[Subscriptions]', e); }
+  }
+
+  async function loadNewReleases() {
+    try {
+      var resp = await fetch('/api/episodes/recent');
+      var json = await resp.json();
+      var list = json.data || [];
+      var container = document.getElementById('newReleaseList');
+      var empty = document.getElementById('releasesEmpty');
+      if (list.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      list.slice(0, 5).forEach(function(e) {
+        var podcastTitle = (e.podcasts && e.podcasts.title) || 'Podcast';
+        var idx = (e.id || '').split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % gradients.length;
+        container.innerHTML +=
+          '<div class="release-row" onclick="location.href=\'/podcast?id=' + encodeURIComponent(e.podcast_id) + '\'">' +
+            '<div class="release-icon" style="background:linear-gradient(135deg,' + gradients[idx] + ');">' +
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)"><polygon points="5,3 19,12 5,21"/></svg>' +
+            '</div>' +
+            '<div class="release-info">' +
+              '<div class="r-title">' + esc(e.title) + '</div>' +
+              '<div class="r-meta">' + esc(podcastTitle) + ' \u00B7 ' + formatDuration(e.duration) + '</div>' +
+            '</div>' +
+            '<div class="release-date">' + getTimeAgo(e.published_at) + '</div>' +
+          '</div>';
+      });
+    } catch (e) { console.warn('[Releases]', e); }
   }
 
   initApp();

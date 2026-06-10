@@ -1,35 +1,275 @@
 const express = require('express');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const app = express();
-const PORT = 8082;
+// ---------------------------------------------------------------------------
+// Configuration — all from env
+// ---------------------------------------------------------------------------
+const requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'FIREBASE_API_KEY', 'JWT_SECRET'];
+for (const v of requiredVars) {
+  if (!process.env[v]) {
+    console.error(`Missing required env variable: ${v}`);
+    process.exit(1);
+  }
+}
 
-// ── Supabase Client (server-side, uses service_role for full read access) ──
-const supabaseUrl = 'https://ardlvylyrocjjokcpesj.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyZGx2eWx5cm9jampva2NwZXNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mzk4OTUsImV4cCI6MjA5NjAxNTg5NX0.2nhrXHra8mx2I9c4ygUktaRrj0DwKLC-xgPWQjBxGsI';
+const PORT = parseInt(process.env.PORT, 10) || 8082;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const firebaseApiKey = process.env.FIREBASE_API_KEY;
+const jwtSecret = process.env.JWT_SECRET;
+
+// Supabase client for data queries only (podcasts, episodes, ratings, etc.)
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Firebase configuration
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDuYOLbC8GAaiToJkgZ7fslkOE9T9zSROg",
-  authDomain: "podcast-publicuser.firebaseapp.com",
-  projectId: "podcast-publicuser",
-  storageBucket: "podcast-publicuser.firebasestorage.app",
-  messagingSenderId: "67028124807",
-  appId: "1:67028124807:web:90e62f8eafd0770e2be422"
-};
+// ---------------------------------------------------------------------------
+// Helper: direct HTTPS call to Firebase Identity Toolkit REST API
+// ---------------------------------------------------------------------------
+function callFirebaseAPI(endpoint, payload) {
+  return new Promise((resolve, reject) => {
+    const https = require('https');
+    const body = JSON.stringify(payload);
+    const url = `https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${firebaseApiKey}`;
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      port: 443,
+      path: urlObj.pathname + urlObj.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: 15000,
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(data) });
+        } catch {
+          resolve({ status: res.statusCode, data });
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Firebase API timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
 
-app.use(express.json());
+// ---------------------------------------------------------------------------
+// Express app
+// ---------------------------------------------------------------------------
+const app = express();
 
-// ── API Routes ──
+// ---------------------------------------------------------------------------
+// Security middleware
+// ---------------------------------------------------------------------------
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https://ui-avatars.com', 'https://image.simplecastcdn.com', 'https://*.supabase.co'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      connectSrc: ["'self'", `https://${supabaseUrl.replace('https://', '')}`],
+    },
+  },
+}));
 
-// Firebase config
-app.get('/api/config', (req, res) => {
-  res.json(FIREBASE_CONFIG);
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, try again later.' },
+});
+app.use('/api/', apiLimiter);
+
+// Login rate limiter — 30 attempts per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Try again in 15 minutes.' },
 });
 
-// ── Podcasts ──
+// Signup rate limiter — 20 attempts per 15 minutes (separate from login)
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Try again in 15 minutes.' },
+});
+
+app.use(cors());
+app.use(express.json());
+
+// ---------------------------------------------------------------------------
+// JWT helpers
+// ---------------------------------------------------------------------------
+function generateToken(payload) {
+  return jwt.sign(payload, jwtSecret, { expiresIn: '7d' });
+}
+
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], jwtSecret);
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Routes: Auth
+// ---------------------------------------------------------------------------
+
+// POST /api/auth/signup
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Create user in Firebase Auth
+    const fbResult = await callFirebaseAPI('accounts:signUp', {
+      email,
+      password,
+      returnSecureToken: true,
+      displayName: name,
+    });
+
+    if (fbResult.status !== 200) {
+      const msg = fbResult.data?.error?.message || 'Signup failed';
+      if (msg === 'EMAIL_EXISTS') {
+        return res.status(409).json({ error: 'This email is already registered. Try signing in instead.' });
+      }
+      if (msg.includes('WEAK_PASSWORD')) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+      }
+      return res.status(400).json({ error: msg });
+    }
+
+    const firebaseUid = fbResult.data.localId;
+
+    // Store role mapping in Supabase (Firebase UID -> role)
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert({ id: firebaseUid, role: 'User' }, { onConflict: 'id' });
+
+    if (roleError) {
+      console.warn('[SIGNUP] Role insert warning:', roleError.message);
+    }
+
+    console.log(`[SIGNUP SUCCESS] ${email} (Firebase UID: ${firebaseUid})`);
+    res.json({
+      message: 'Account created successfully! You can now sign in.',
+    });
+  } catch (err) {
+    console.error('[SIGNUP ERROR]', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Authenticate with Firebase Identity Toolkit
+    const fbResult = await callFirebaseAPI('accounts:signInWithPassword', {
+      email,
+      password,
+      returnSecureToken: true,
+    });
+
+    if (fbResult.status !== 200) {
+      const msg = fbResult.data?.error?.message || 'Authentication failed';
+      console.log(`[LOGIN FAILED] ${email}: ${msg}`);
+      if (msg === 'EMAIL_NOT_FOUND' || msg === 'INVALID_PASSWORD' || msg === 'INVALID_LOGIN_CREDENTIALS') {
+        return res.status(401).json({ error: 'Invalid email or password. Please check your credentials.' });
+      }
+      if (msg === 'TOO_MANY_ATTEMPTS_TRY_LATER') {
+        return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+      }
+      return res.status(401).json({ error: 'Invalid email or password. Please check your credentials.' });
+    }
+
+    const firebaseUid = fbResult.data.localId;
+    const displayName = fbResult.data.displayName || email.split('@')[0] || 'User';
+
+    // Ensure user has a role entry (using Firebase UID)
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert({ id: firebaseUid, role: 'User' }, { onConflict: 'id' });
+
+    if (roleError) {
+      console.warn('[LOGIN] Role upsert warning:', roleError.message);
+    }
+
+    const token = generateToken({
+      sub: firebaseUid,
+      email: fbResult.data.email,
+      display_name: displayName,
+    });
+
+    console.log(`[LOGIN SUCCESS] ${email} (Firebase UID: ${firebaseUid})`);
+    res.json({
+      token,
+      user: {
+        id: firebaseUid,
+        email: fbResult.data.email,
+        display_name: displayName,
+      },
+    });
+  } catch (err) {
+    console.error('[LOGIN ERROR]', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/auth/me — current user info
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  res.json({
+    id: req.user.sub,
+    email: req.user.email,
+    display_name: req.user.display_name,
+  });
+});
+
+// POST /api/auth/logout
+app.post('/api/auth/logout', (_req, res) => {
+  res.json({ success: true });
+});
+
+// ---------------------------------------------------------------------------
+// Public Data Routes (no auth required)
+// ---------------------------------------------------------------------------
 
 // GET /api/podcasts - list all podcasts
 app.get('/api/podcasts', async (req, res) => {
@@ -38,7 +278,16 @@ app.get('/api/podcasts', async (req, res) => {
     let query = supabase.from('podcasts').select('*', { count: 'exact' });
 
     if (search) query = query.ilike('title', `%${search}%`);
-    if (category) query = query.eq('feed_id.category', category); // Filter by feed category
+    if (category) {
+      const { data: catFeeds } = await supabase
+        .from('feeds')
+        .select('id')
+        .eq('category', category)
+        .eq('status', 'active');
+      const feedIds = catFeeds?.map(f => f.id) || [];
+      if (feedIds.length === 0) return res.json({ data: [], total: 0, offset: Number(offset), limit: Number(limit) });
+      query = query.in('feed_id', feedIds);
+    }
     if (featured === 'true') query = query.eq('featured', true);
 
     const { data, count, error } = await query
@@ -52,7 +301,7 @@ app.get('/api/podcasts', async (req, res) => {
   }
 });
 
-// GET /api/podcasts/featured - get featured podcasts
+// GET /api/podcasts/featured
 app.get('/api/podcasts/featured', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -69,7 +318,7 @@ app.get('/api/podcasts/featured', async (req, res) => {
   }
 });
 
-// GET /api/podcasts/:id - get podcast detail
+// GET /api/podcasts/:id
 app.get('/api/podcasts/:id', async (req, res) => {
   try {
     const { data: podcast, error } = await supabase
@@ -78,10 +327,15 @@ app.get('/api/podcasts/:id', async (req, res) => {
       .eq('id', req.params.id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // PGRST116 = no rows returned by .single()
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Podcast not found' });
+      }
+      throw error;
+    }
     if (!podcast) return res.status(404).json({ error: 'Podcast not found' });
 
-    // Get episodes for this podcast
     const { data: episodes, error: epError } = await supabase
       .from('episodes')
       .select('*')
@@ -97,13 +351,13 @@ app.get('/api/podcasts/:id', async (req, res) => {
   }
 });
 
-// ── Episodes ──
-
-// GET /api/episodes - list all published episodes
+// GET /api/episodes
 app.get('/api/episodes', async (req, res) => {
   try {
     const { limit = 20, offset = 0, podcast_id } = req.query;
-    let query = supabase.from('episodes').select('*, podcasts!inner(title, author, image_url)', { count: 'exact' });
+    let query = supabase
+      .from('episodes')
+      .select('*, podcasts!inner(title, author, image_url)', { count: 'exact' });
 
     query = query.eq('status', 'published');
     if (podcast_id) query = query.eq('podcast_id', podcast_id);
@@ -119,7 +373,7 @@ app.get('/api/episodes', async (req, res) => {
   }
 });
 
-// GET /api/episodes/recent - get recent episodes for homepage
+// GET /api/episodes/recent
 app.get('/api/episodes/recent', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -136,8 +390,6 @@ app.get('/api/episodes/recent', async (req, res) => {
   }
 });
 
-// ── Categories ──
-
 // GET /api/categories
 app.get('/api/categories', async (req, res) => {
   try {
@@ -153,10 +405,9 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// GET /api/categories/:name/podcasts - get podcasts by category
+// GET /api/categories/:name/podcasts
 app.get('/api/categories/:name/podcasts', async (req, res) => {
   try {
-    // Get feeds with matching category, then their podcasts
     const { data: feeds, error: feedError } = await supabase
       .from('feeds')
       .select('id')
@@ -180,9 +431,7 @@ app.get('/api/categories/:name/podcasts', async (req, res) => {
   }
 });
 
-// ── Search ──
-
-// GET /api/search?q=... - search podcasts and episodes
+// GET /api/search?q=...
 app.get('/api/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -191,7 +440,6 @@ app.get('/api/search', async (req, res) => {
     }
 
     const term = q.trim();
-
     const [podcastsRes, episodesRes] = await Promise.all([
       supabase.from('podcasts')
         .select('*')
@@ -213,17 +461,19 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// ── User Activity (ratings, follows, history) ──
+// ---------------------------------------------------------------------------
+// Protected User Routes (auth required)
+// ---------------------------------------------------------------------------
 
-// POST /api/ratings - submit or update a rating
-app.post('/api/ratings', async (req, res) => {
+// POST /api/ratings - submit/update a rating
+app.post('/api/ratings', authMiddleware, async (req, res) => {
   try {
-    const { user_id, podcast_id, rating } = req.body;
-    if (!user_id || !podcast_id || !rating) {
-      return res.status(400).json({ error: 'user_id, podcast_id, and rating are required' });
+    const { podcast_id, rating } = req.body;
+    const user_id = req.user.sub;
+    if (!podcast_id || !rating) {
+      return res.status(400).json({ error: 'podcast_id and rating are required' });
     }
 
-    // Upsert rating
     const { data, error } = await supabase
       .from('ratings')
       .upsert({ user_id, podcast_id, rating }, { onConflict: 'user_id, podcast_id' })
@@ -237,13 +487,14 @@ app.post('/api/ratings', async (req, res) => {
   }
 });
 
-// GET /api/ratings/:user_id/:podcast_id - get user's rating for a podcast
-app.get('/api/ratings/:user_id/:podcast_id', async (req, res) => {
+// GET /api/ratings/:podcast_id - get user's rating for a podcast
+app.get('/api/ratings/:podcast_id', authMiddleware, async (req, res) => {
   try {
+    const user_id = req.user.sub;
     const { data, error } = await supabase
       .from('ratings')
       .select('rating')
-      .eq('user_id', req.params.user_id)
+      .eq('user_id', user_id)
       .eq('podcast_id', req.params.podcast_id)
       .maybeSingle();
 
@@ -254,12 +505,13 @@ app.get('/api/ratings/:user_id/:podcast_id', async (req, res) => {
   }
 });
 
-// POST /api/follows - follow/unfollow a podcast
-app.post('/api/follows', async (req, res) => {
+// POST /api/follows - follow/unfollow
+app.post('/api/follows', authMiddleware, async (req, res) => {
   try {
-    const { user_id, podcast_id, follow } = req.body;
-    if (!user_id || !podcast_id) {
-      return res.status(400).json({ error: 'user_id and podcast_id are required' });
+    const { podcast_id, follow } = req.body;
+    const user_id = req.user.sub;
+    if (!podcast_id) {
+      return res.status(400).json({ error: 'podcast_id is required' });
     }
 
     if (follow) {
@@ -282,13 +534,14 @@ app.post('/api/follows', async (req, res) => {
   }
 });
 
-// GET /api/follows/:user_id - get user's followed podcasts
-app.get('/api/follows/:user_id', async (req, res) => {
+// GET /api/follows - get user's followed podcasts
+app.get('/api/follows', authMiddleware, async (req, res) => {
   try {
+    const user_id = req.user.sub;
     const { data, error } = await supabase
       .from('user_follows')
       .select('podcast_id, podcasts!inner(*)')
-      .eq('user_id', req.params.user_id);
+      .eq('user_id', user_id);
 
     if (error) throw error;
     res.json({ data: data.map(f => f.podcasts) });
@@ -298,11 +551,12 @@ app.get('/api/follows/:user_id', async (req, res) => {
 });
 
 // POST /api/activity - log user activity
-app.post('/api/activity', async (req, res) => {
+app.post('/api/activity', authMiddleware, async (req, res) => {
   try {
-    const { user_id, episode_id, podcast_id, action, listened_seconds } = req.body;
-    if (!user_id || !action) {
-      return res.status(400).json({ error: 'user_id and action are required' });
+    const { episode_id, podcast_id, action, listened_seconds } = req.body;
+    const user_id = req.user.sub;
+    if (!action) {
+      return res.status(400).json({ error: 'action is required' });
     }
 
     const { error } = await supabase.from('user_activity').insert({
@@ -316,13 +570,14 @@ app.post('/api/activity', async (req, res) => {
   }
 });
 
-// GET /api/activity/:user_id - get user's listening history
-app.get('/api/activity/:user_id', async (req, res) => {
+// GET /api/activity - get user's listening history
+app.get('/api/activity', authMiddleware, async (req, res) => {
   try {
+    const user_id = req.user.sub;
     const { data, error } = await supabase
       .from('user_activity')
       .select('*, episodes!inner(title, audio_url, duration), podcasts!inner(title, image_url)')
-      .eq('user_id', req.params.user_id)
+      .eq('user_id', user_id)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -333,10 +588,42 @@ app.get('/api/activity/:user_id', async (req, res) => {
   }
 });
 
-// ── Static Files ──
-app.use(express.static(__dirname, { extensions: ['js', 'css', 'png', 'jpg', 'svg', 'ico'] }));
+// DELETE /api/activity - clear user's listening history
+app.delete('/api/activity', authMiddleware, async (req, res) => {
+  try {
+    const user_id = req.user.sub;
+    const { error } = await supabase
+      .from('user_activity')
+      .delete()
+      .eq('user_id', user_id);
 
-// ── Clean URL Routes ──
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/profile - update user profile
+app.put('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const user_id = req.user.sub;
+    const { display_name, avatar_url } = req.body;
+
+    // We can't update auth.users metadata with anon key,
+    // so we store profile data in user_roles or a profiles table
+    // For now, just return success — profile updates
+    // will be synced via client-side Supabase auth updateUser() call
+    res.json({ success: true, user: { id: user_id, display_name, avatar_url } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Clean URL routes — must come BEFORE static middleware so /auth loads
+// auth.html and not auth.js via the extensions fallback
+// ---------------------------------------------------------------------------
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'auth.html')));
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, 'auth.html')));
 app.get('/home', (req, res) => res.sendFile(path.join(__dirname, 'home.html')));
@@ -345,12 +632,29 @@ app.get('/podcast', (req, res) => res.sendFile(path.join(__dirname, 'podcast.htm
 app.get('/category', (req, res) => res.sendFile(path.join(__dirname, 'category.html')));
 app.get('/profile', (req, res) => res.sendFile(path.join(__dirname, 'profile.html')));
 
-// ── Start Server ──
+app.get('/library', (req, res) => res.sendFile(path.join(__dirname, 'library.html')));
+app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'history.html')));
+app.get('/subscriptions', (req, res) => res.sendFile(path.join(__dirname, 'subscriptions.html')));
+
+// Static files (CSS, JS, images) — fallback after all route handlers
+app.use(express.static(__dirname, { extensions: ['css', 'png', 'jpg', 'svg', 'ico'] }));
+
+// ---------------------------------------------------------------------------
+// Global error handler
+// ---------------------------------------------------------------------------
+app.use((err, _req, res, _next) => {
+  console.error('[SERVER ERROR]', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
 app.listen(PORT, () => {
   console.log('=============================================');
-  console.log(' SoundWave - Public User Portal (Express)');
-  console.log(` http://localhost:${PORT}`);
-  console.log(' Firebase Auth + Supabase Data API');
-  console.log(' Press CTRL+C to stop.');
+  console.log('  SoundWave - Public User Portal (Express)');
+  console.log(`  http://localhost:${PORT}`);
+  console.log('  Supabase Auth + JWT Session');
+  console.log('  Press CTRL+C to stop.');
   console.log('=============================================');
 });

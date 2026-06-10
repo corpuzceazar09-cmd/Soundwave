@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Settings - Podcast Editor</title>
+  <title>Editor Settings - Podcast Editor</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
 </head>
+
 <body>
   <div class="dashboard-layout">
     <aside class="sidebar">
@@ -20,14 +23,17 @@
         <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item active"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
         </div>
       </div>
     </aside>
@@ -46,7 +52,8 @@
             <div class="notification-dot"></div>
           </div>
           <div class="user-profile">
-            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User"
+              class="user-avatar">
           </div>
         </div>
       </header>
@@ -55,7 +62,8 @@
         <div class="page-header">
           <div>
             <h2 class="page-title">Editor Settings</h2>
-            <p class="page-subtitle">Configure system-wide parameters, manage editorial roles, and refine notification logic.</p>
+            <p class="page-subtitle">Configure system-wide parameters, manage editorial roles, and refine notification
+              logic.</p>
           </div>
         </div>
 
@@ -77,44 +85,8 @@
           </div>
 
           <div class="taxonomy-grid">
-            <div class="taxonomy-card">
-              <div class="taxonomy-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-microchip"></i></div>
-              <div class="taxonomy-body">
-                <div class="taxonomy-title">Tech &amp; Innovation</div>
-                <div class="taxonomy-desc">Covering AI, hardware, and software development cycles.</div>
-              </div>
-              <div class="taxonomy-actions">
-                <span class="badge badge-blue"><span class="badge-dot"></span>ESTABLISHED</span>
-                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
-                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
-              </div>
-            </div>
-
-            <div class="taxonomy-card">
-              <div class="taxonomy-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-landmark"></i></div>
-              <div class="taxonomy-body">
-                <div class="taxonomy-title">Global Finance</div>
-                <div class="taxonomy-desc">Market analytics, crypto history, and investment strategy.</div>
-              </div>
-              <div class="taxonomy-actions">
-                <span class="badge badge-blue"><span class="badge-dot"></span>ESTABLISHED</span>
-                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
-                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
-              </div>
-            </div>
-
-            <div class="taxonomy-card">
-              <div class="taxonomy-icon" style="background:#fce7f3;color:#db2777"><i class="fa-solid fa-palette"></i></div>
-              <div class="taxonomy-body">
-                <div class="taxonomy-title">Culture &amp; Arts</div>
-                <div class="taxonomy-desc">Intersections of culture, art series, creativity, and art in the wellness zone.</div>
-              </div>
-              <div class="taxonomy-actions">
-                <span class="badge badge-yellow"><span class="badge-dot"></span>MANAGED</span>
-                <button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button>
-                <button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button>
-              </div>
-            </div>
+            <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-gray)"><i
+                class="fa-solid fa-spinner fa-spin"></i> Loading categories...</div>
           </div>
 
           <div class="settings-footer">
@@ -134,22 +106,18 @@
           </div>
           <table class="data-table">
             <thead>
-              <tr><th>Editor ID</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+              <tr>
+                <th>Editor ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="font-family:monospace">ED-001-001</td>
-                <td>James Weser</td>
-                <td><span class="badge badge-blue">Senior Editor</span></td>
-                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
-                <td><button class="btn-icon"><i class="fa-solid fa-pen"></i></button></td>
-              </tr>
-              <tr>
-                <td style="font-family:monospace">ED-002-004</td>
-                <td>Sarah Chan</td>
-                <td><span class="badge badge-gray">Editor</span></td>
-                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
-                <td><button class="btn-icon"><i class="fa-solid fa-pen"></i></button></td>
+                <td colspan="5" style="text-align:center;padding:1rem;color:var(--text-gray)"><i
+                    class="fa-solid fa-spinner fa-spin"></i> Loading editors...</td>
               </tr>
             </tbody>
           </table>
@@ -198,7 +166,7 @@
   <script>
     const tabs = document.querySelectorAll('.settings-tab');
     tabs.forEach(tab => {
-      tab.addEventListener('click', function() {
+      tab.addEventListener('click', function () {
         tabs.forEach(t => t.classList.remove('active'));
         this.classList.add('active');
         document.querySelectorAll('.settings-tab-body').forEach(b => b.style.display = 'none');
@@ -206,5 +174,62 @@
       });
     });
   </script>
+  <script>
+    requireAuth();
+    (function () {
+      const user = EDITOR_API.getUser();
+      if (user) {
+        document.getElementById('sidebarEmail').textContent = user.email;
+        document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+        document.getElementById('sidebarUser').style.display = 'block';
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      // ---- LOAD CATEGORIES ----
+      const taxGrid = document.querySelector('.taxonomy-grid');
+
+      function getIcon(name) {
+        const map = { 'technology': 'fa-microchip', 'business': 'fa-landmark', 'comedy': 'fa-face-grin', 'education': 'fa-book', 'health': 'fa-heart-pulse', 'news': 'fa-newspaper', 'science': 'fa-flask', 'true crime': 'fa-gavel' };
+        const k = (name || '').toLowerCase();
+        for (const [key, val] of Object.entries(map)) { if (k.includes(key)) return val; }
+        return 'fa-tag';
+      }
+      function getColor(name) {
+        const cols = [{ bg: '#dbeafe', fg: '#2563eb' }, { bg: '#d1fae5', fg: '#059669' }, { bg: '#fce7f3', fg: '#db2777' }, { bg: '#fef3c7', fg: '#d97706' }, { bg: '#e0f2fe', fg: '#0284c7' }, { bg: '#f3e8ff', fg: '#7c3aed' }, { bg: '#fce7f3', fg: '#e11d48' }, { bg: '#ecfdf5', fg: '#65a30d' }];
+        let h = 0; for (let i = 0; i < (name || '').length; i++) h = ((h << 5) - h) + name.charCodeAt(i);
+        return cols[Math.abs(h) % cols.length];
+      }
+      function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+      EDITOR_API.get('/api/categories')
+        .then(data => {
+          const items = data.value || data || [];
+          if (!items.length) { taxGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-gray)">No categories found</div>'; return; }
+          taxGrid.innerHTML = items.map(c => {
+            const col = getColor(c.name);
+            return '<div class="taxonomy-card"><div class="taxonomy-icon" style="background:' + col.bg + ';color:' + col.fg + '"><i class="fa-solid ' + getIcon(c.name) + '"></i></div><div class="taxonomy-body"><div class="taxonomy-title">' + esc(c.name) + '</div><div class="taxonomy-desc">' + esc(c.description || '') + '</div></div><div class="taxonomy-actions"><span class="badge badge-blue"><span class="badge-dot"></span>ESTABLISHED</span><button class="taxonomy-action-btn"><i class="fa-solid fa-pen"></i> EDITOR</button><button class="taxonomy-action-btn taxonomy-delete"><i class="fa-solid fa-trash"></i> ARCHIVE</button></div></div>';
+          }).join('');
+        })
+        .catch(err => { console.error(err); taxGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--error-text)">Failed to load categories</div>'; });
+
+      // ---- LOAD EDITOR ACCOUNTS ----
+      const acctTbody = document.querySelector('#tab-accounts .data-table tbody');
+      if (acctTbody) {
+        EDITOR_API.get('/api/editors')
+          .then(data => {
+            const items = data.value || data || [];
+            if (!items.length) { acctTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--text-gray)">No editors found</td></tr>'; return; }
+            acctTbody.innerHTML = items.map((e, i) => {
+              const roleBadge = (e.role || 'Editor') === 'Admin' ? 'badge-blue' : 'badge-gray';
+              return '<tr><td style="font-family:monospace">ED-' + String(i + 1).padStart(3, '0') + '</td><td>' + esc(e.email || e.id || 'Unknown') + '</td><td><span class="badge ' + roleBadge + '">' + esc(e.role || 'Editor') + '</span></td><td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td><td><button class="btn-icon"><i class="fa-solid fa-pen"></i></button></td></tr>';
+            }).join('');
+          })
+          .catch(err => { console.error(err); acctTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--error-text)">Failed to load editors</td></tr>'; });
+      }
+    })();
+  </script>
 </body>
+
 </html>

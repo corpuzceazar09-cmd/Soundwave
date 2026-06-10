@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -21,14 +22,17 @@
         <a href="/rich-editor" class="nav-item active"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
         </div>
       </div>
     </aside>
@@ -540,5 +544,16 @@
 })();
 </script>
 
+  <script>
+    (function() {
+      const email = localStorage.getItem('editor_email');
+      const role = localStorage.getItem('editor_role');
+      if (email) {
+        document.getElementById('sidebarEmail').textContent = email;
+        document.getElementById('sidebarRole').textContent = role || 'Editor';
+        document.getElementById('sidebarUser').style.display = 'block';
+      }
+    })();
+  </script>
 </body>
 </html>

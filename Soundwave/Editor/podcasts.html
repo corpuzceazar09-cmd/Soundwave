@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Podcasts - Podcast Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
+  <style>
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-box {
+      background: var(--bg-white);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .modal-header h2 {
+      font-size: 1.25rem;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-gray);
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+    .modal-close:hover {
+      color: var(--text-dark);
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 0.375rem;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--text-dark);
+      background: var(--bg-white);
+    }
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+    .podcast-cover-cell {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--border-color);
+    }
+    .featured-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      background: #FEF3C7;
+      color: #D97706;
+    }
+    .featured-badge.active {
+      background: #D1FAE5;
+      color: #059669;
+    }
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .search-row .form-control {
+      max-width: 320px;
+    }
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      color: var(--text-gray);
+      margin-left: auto;
+    }
+    .live-indicator .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22C55E;
+      animation: livePulse 2s ease-in-out infinite;
+    }
+    .live-indicator.paused .live-dot {
+      background: #9CA3AF;
+      animation: none;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .live-indicator .last-updated {
+      margin-left: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Podcast Editor</h1>
+        <p class="sidebar-subtitle">Editorial Control Suite</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/editorial-dashboard" class="nav-item"><i class="fa-solid fa-border-all"></i>Editorial Dashboard</a>
+        <a href="/review-queue" class="nav-item"><i class="fa-solid fa-list-check"></i>Review Queue</a>
+        <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
+        <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
+        <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item active"><i class="fa-solid fa-podcast"></i>Podcasts</a>
+        <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="btn-primary w-full" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
+        <div class="sidebar-bottom-links">
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-bar input-wrapper">
+          <i class="fa-solid fa-magnifying-glass input-icon"></i>
+          <input type="text" class="form-control" id="searchInput" placeholder="Search podcasts by title, author, or description...">
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-primary" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+          <div class="notification">
+            <i class="fa-regular fa-bell"></i>
+            <div class="notification-dot"></div>
+          </div>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Editor&background=2563EB&color=fff" alt="User" class="user-avatar">
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Podcast Management</h2>
+            <p class="page-subtitle">Loading podcasts...</p>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="ep-stats-row" id="statsRow">
+          <div class="ep-stat">
+            <div class="ep-stat-label">TOTAL PODCASTS</div>
+            <div class="ep-stat-val" id="totalPodcasts">0</div>
+            <div class="ep-stat-sub" style="color:var(--text-gray)">All podcasts</div>
+          </div>
+          <div class="ep-stat" style="border-left:1px solid var(--border-color);padding-left:1.5rem">
+            <div class="ep-stat-label">TOTAL EPISODES</div>
+            <div class="ep-stat-val" id="totalEpisodes">0</div>
+            <div class="ep-stat-sub" style="color:var(--text-gray)">Across all podcasts</div>
+          </div>
+          <div class="ep-stat" style="border-left:1px solid var(--border-color);padding-left:1.5rem">
+            <div class="ep-stat-label">FEATURED</div>
+            <div class="ep-stat-val" id="featuredCount">0</div>
+            <div class="ep-stat-sub" style="color:var(--text-gray)">Featured podcasts</div>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-row">
+          <input type="text" class="form-control" id="podcastSearch" placeholder="Search podcasts..." style="padding-left:2.75rem">
+          <span style="font-size:0.8125rem;color:var(--text-gray)" id="resultCount"></span>
+          <span class="live-indicator" id="liveIndicator">
+            <span class="live-dot"></span>
+            <span>Live</span>
+            <span class="last-updated" id="lastUpdated"></span>
+          </span>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Podcast</th>
+              <th>Author</th>
+              <th>Episodes</th>
+              <th>Featured</th>
+              <th>Language</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="podcastsTbody">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading podcasts...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Edit Podcast</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <form id="editForm" onsubmit="savePodcast(event)">
+        <input type="hidden" id="editPodcastId">
+        <div class="form-group">
+          <label for="editTitle">Title</label>
+          <input type="text" id="editTitle" required>
+        </div>
+        <div class="form-group">
+          <label for="editAuthor">Author</label>
+          <input type="text" id="editAuthor">
+        </div>
+        <div class="form-group">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editLanguage">Language</label>
+          <select id="editLanguage">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="pt">Portuguese</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  requireAuth();
+  (function() {
+    const user = EDITOR_API.getUser();
+    if (user) {
+      document.getElementById('sidebarEmail').textContent = user.email;
+      document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+      document.getElementById('sidebarUser').style.display = 'block';
+    }
+  })();
+
+  var allPodcasts = [];
+  var debounceTimer = null;
+  var pollTimer = null;
+  var lastFingerprint = '';
+  var isPollingPaused = false;
+  var POLL_INTERVAL = 15000;
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '\u2014';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function updateLastUpdated() {
+    var now = new Date();
+    var time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    document.getElementById('lastUpdated').textContent = '\u00b7 Updated ' + time;
+  }
+
+  function setLiveIndicator(paused) {
+    var el = document.getElementById('liveIndicator');
+    if (paused) {
+      el.classList.add('paused');
+    } else {
+      el.classList.remove('paused');
+    }
+  }
+
+  function loadPodcasts(searchTerm) {
+    var url = '/api/editor/podcasts?limit=200';
+    if (searchTerm) url += '&search=' + encodeURIComponent(searchTerm);
+
+    var tbody = document.getElementById('podcastsTbody');
+
+    EDITOR_API.get(url)
+      .then(function(data) {
+        var items = data.items || [];
+        var newFingerprint = JSON.stringify(items.map(function(p) { return p.id + ':' + (p.updated_at || p.created_at || '') + ':' + (p.episode_count || 0) + ':' + (p.featured ? '1' : '0'); }));
+
+        // Skip re-render if data hasn't changed
+        if (newFingerprint === lastFingerprint && allPodcasts.length > 0) {
+          updateLastUpdated();
+          return;
+        }
+
+        lastFingerprint = newFingerprint;
+        allPodcasts = items;
+        var total = data.total || allPodcasts.length;
+        document.querySelector('.page-subtitle').textContent = 'Managing ' + total + ' podcasts';
+        document.getElementById('totalPodcasts').textContent = total;
+
+        var totalEps = 0;
+        var featuredCount = 0;
+        allPodcasts.forEach(function(p) {
+          totalEps += p.episode_count || 0;
+          if (p.featured) featuredCount++;
+        });
+        document.getElementById('totalEpisodes').textContent = totalEps;
+        document.getElementById('featuredCount').textContent = featuredCount;
+        document.getElementById('resultCount').textContent = allPodcasts.length + ' of ' + total;
+
+        if (allPodcasts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-gray)">No podcasts found</td></tr>';
+          updateLastUpdated();
+          return;
+        }
+
+        tbody.innerHTML = allPodcasts.map(function(p) {
+          var title = escapeHtml(p.title || 'Untitled');
+          var author = escapeHtml(p.author || '\u2014');
+          var img = p.image_url ? '<img src="' + escapeHtml(p.image_url) + '" class="podcast-cover-cell" alt="">' : '<div class="podcast-cover-cell" style="display:flex;align-items:center;justify-content:center;color:var(--text-light)"><i class="fa-solid fa-podcast"></i></div>';
+          var featured = p.featured ? '<span class="featured-badge active"><i class="fa-solid fa-star"></i> Featured</span>' : '<span class="featured-badge"><i class="fa-regular fa-star"></i> Not featured</span>';
+          var epCount = p.episode_count || 0;
+          var lang = (p.language || 'en').toUpperCase();
+          return '<tr>' +
+            '<td><div class="podcast-info">' + img + '<div><div class="podcast-title">' + title + '</div><div class="podcast-publisher">Created ' + formatDate(p.created_at) + '</div></div></div></td>' +
+            '<td>' + author + '</td>' +
+            '<td>' + epCount + '</td>' +
+            '<td>' + featured + '</td>' +
+            '<td>' + lang + '</td>' +
+            '<td><div style="display:flex;gap:0.5rem">' +
+              '<button class="btn-icon" onclick="openEditModal(\'' + p.id + '\')" title="Edit"><i class="fa-solid fa-pen"></i></button>' +
+              '<button class="btn-icon" onclick="toggleFeatured(\'' + p.id + '\', ' + (p.featured ? 'false' : 'true') + ')" title="' + (p.featured ? 'Unfeature' : 'Feature') + '" style="color:' + (p.featured ? 'var(--warning-text)' : 'var(--text-gray)') + '"><i class="fa-solid fa-star"></i></button>' +
+            '</div></td>' +
+            '</tr>';
+        }).join('');
+        updateLastUpdated();
+      })
+      .catch(function(err) {
+        console.error('Failed to load podcasts:', err);
+        if (allPodcasts.length === 0) {
+          document.getElementById('podcastsTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load podcasts</td></tr>';
+        }
+      });
+  }
+
+  // ---- Polling ----
+  function startPolling() {
+    stopPolling();
+    if (isPollingPaused) return;
+    setLiveIndicator(false);
+    pollTimer = setInterval(function() {
+      if (!isPollingPaused) {
+        loadPodcasts(document.getElementById('podcastSearch').value.trim());
+      }
+    }, POLL_INTERVAL);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function pausePolling() {
+    isPollingPaused = true;
+    stopPolling();
+    setLiveIndicator(true);
+  }
+
+  function resumePolling() {
+    isPollingPaused = false;
+    setLiveIndicator(false);
+    // Immediate refresh when resuming
+    loadPodcasts(document.getElementById('podcastSearch').value.trim());
+    startPolling();
+  }
+
+  // ---- Search with debounce ----
+  var searchPollPauseTimer = null;
+  document.getElementById('podcastSearch').addEventListener('input', function() {
+    var val = this.value.trim();
+    clearTimeout(debounceTimer);
+    clearTimeout(searchPollPauseTimer);
+
+    // Pause polling while user is actively typing
+    pausePolling();
+
+    debounceTimer = setTimeout(function() {
+      loadPodcasts(val.length >= 2 ? val : '');
+      // Resume polling after search settles
+      searchPollPauseTimer = setTimeout(function() {
+        resumePolling();
+      }, 2000);
+    }, 300);
+  });
+
+  // ---- Edit Modal ----
+  function openEditModal(id) {
+    var p = allPodcasts.find(function(x) { return x.id === id; });
+    if (!p) return;
+    pausePolling();
+    document.getElementById('editPodcastId').value = p.id;
+    document.getElementById('editTitle').value = p.title || '';
+    document.getElementById('editAuthor').value = p.author || '';
+    document.getElementById('editDescription').value = p.description || '';
+    document.getElementById('editLanguage').value = p.language || 'en';
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('active');
+    resumePolling();
+  }
+
+  function savePodcast(e) {
+    e.preventDefault();
+    var id = document.getElementById('editPodcastId').value;
+    var data = {
+      title: document.getElementById('editTitle').value.trim(),
+      author: document.getElementById('editAuthor').value.trim(),
+      description: document.getElementById('editDescription').value.trim(),
+      language: document.getElementById('editLanguage').value,
+    };
+
+    var btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+    EDITOR_API.put('/api/editor/podcasts/' + id, data)
+      .then(function(resp) {
+        if (resp.error) throw new Error(resp.error);
+        closeEditModal();
+        loadPodcasts(document.getElementById('podcastSearch').value.trim());
+      })
+      .catch(function(err) {
+        alert('Failed to save: ' + err.message);
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+      });
+  }
+
+  // ---- Toggle Featured ----
+  function toggleFeatured(id, featured) {
+    var action = featured ? 'Feature' : 'Unfeature';
+    if (!confirm(action + ' this podcast?')) return;
+
+    EDITOR_API.post('/api/editor/podcasts/' + id + '/feature', { featured: featured })
+      .then(function(resp) {
+        if (resp.error) throw new Error(resp.error);
+        loadPodcasts(document.getElementById('podcastSearch').value.trim());
+      })
+      .catch(function(err) {
+        alert('Failed to ' + action.toLowerCase() + ': ' + err.message);
+      });
+  }
+
+  // ---- Close modal on overlay click ----
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  // ---- Initial load ----
+  loadPodcasts('');
+  startPolling();
+  </script>
+</body>
+</html>

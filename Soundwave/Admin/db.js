@@ -21,7 +21,7 @@ async function testConnection() {
       .select('name')
       .limit(5);
     if (error) throw error;
-    console.log('✅ Connected to Supabase. Tables:', data.map(t => t.table_name).join(', '));
+    console.log('✅ Connected to Supabase. Categories:', data.map(t => t.name).join(', '));
     return true;
   } catch (err) {
     console.error('❌ Database connection error:', err.message);

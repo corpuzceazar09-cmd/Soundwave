@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SoundWave - Categories</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --sidebar: 240px; --player-h: 80px; --topbar-h: 64px; }
@@ -91,9 +90,9 @@
     <nav class="sidebar-nav">
       <button class="nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
       <button class="nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Discover</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+      <button class="nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+      <button class="nav-item" onclick="location.href='/subscriptions'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
+      <button class="nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
       <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
     </nav>
     <div class="sidebar-footer">
@@ -135,38 +134,28 @@
   <nav class="mobile-nav">
     <button class="mobile-nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
     <button class="mobile-nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Explore</button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+    <button class="mobile-nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+    <button class="mobile-nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
   </nav>
 
 <script>
-  var currentUser = null;
   var catGradients = ['#EEF2FF,#E0E7FF','#F0FDF4,#DCFCE7','#FFF1F2,#FFE4E6','#FFF7ED,#FFEDD5','#F5F3FF,#EDE9FE','#ECFEFF,#CFFAFE'];
   var catColors = ['#6366F1','#10B981','#F43F5E','#F97316','#8B5CF6','#06B6D4'];
   var podcastGradients = ['#1E293B,#0F172A','#1E3A5F,#0C2233','#2D1B69,#1A0D3B','#5B1E3A,#2E0F1D','#1B4D3E,#0D2B22','#6B3A1E,#3D1F0F'];
 
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  async function initFirebase() {
-    try {
-      var resp = await fetch('/api/config');
-      var config = await resp.json();
-      firebase.initializeApp(config);
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) { currentUser = user; onReady(); }
-        else { window.location.href = '/auth'; }
-      });
-    } catch (err) {
-      console.error('[Init]', err);
-      document.getElementById('loadingOverlay').querySelector('p').textContent = 'Connection failed...';
-      setTimeout(function() { window.location.href = '/auth'; }, 1500);
-    }
+  function initApp() {
+    if (!PUBLIC_API.requireAuth()) return;
+    onReady();
   }
 
   function onReady() {
-    document.getElementById('userAvatar').textContent = (currentUser.displayName || currentUser.email || 'U')[0].toUpperCase();
+    var user = PUBLIC_API.getUser();
+    if (!user) { PUBLIC_API.logout(); return; }
+    document.getElementById('userAvatar').textContent = (user.display_name || user.email || 'U')[0].toUpperCase();
     document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('signOutBtn').addEventListener('click', function() { firebase.auth().signOut(); });
+    document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
     document.querySelector('.avatar').addEventListener('click', function() { location.href = '/profile'; });
 
     var params = new URLSearchParams(window.location.search);
@@ -234,7 +223,7 @@
     } catch (e) { console.warn('[Category]', e); }
   }
 
-  initFirebase();
+  initApp();
 </script>
 </body>
 </html>

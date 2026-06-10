@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SoundWave - Discover</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -301,15 +300,15 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         Discover
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/library'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
         Library
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/subscriptions'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>
         Subscriptions
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/history'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         History
       </button>
@@ -405,45 +404,35 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       Explore
     </button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'">
+    <button class="mobile-nav-item" onclick="location.href='/library'">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
       Library
     </button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'">
+    <button class="mobile-nav-item" onclick="location.href='/history'">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       History
     </button>
   </nav>
 
 <script>
-  var currentUser = null;
   var selectedCategory = null;
   var allPodcasts = [];
   var debounceTimer = null;
 
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  async function initFirebase() {
-    try {
-      var resp = await fetch('/api/config');
-      var config = await resp.json();
-      firebase.initializeApp(config);
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) { currentUser = user; onReady(); }
-        else { window.location.href = '/auth'; }
-      });
-    } catch (err) {
-      console.error('[Init]', err);
-      document.getElementById('loadingOverlay').querySelector('p').textContent = 'Connection failed...';
-      setTimeout(function() { window.location.href = '/auth'; }, 1500);
-    }
+  function initApp() {
+    if (!PUBLIC_API.requireAuth()) return;
+    onReady();
   }
 
   function onReady() {
-    var initial = (currentUser.displayName || currentUser.email || 'U')[0].toUpperCase();
+    var user = PUBLIC_API.getUser();
+    if (!user) { PUBLIC_API.logout(); return; }
+    var initial = (user.display_name || user.email || 'U')[0].toUpperCase();
     document.getElementById('userAvatar').textContent = initial;
     document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('signOutBtn').addEventListener('click', function() { firebase.auth().signOut(); });
+    document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
     document.querySelector('.avatar')?.addEventListener('click', function() { location.href = '/profile'; });
 
     loadCategories();
@@ -629,7 +618,7 @@
     return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
-  initFirebase();
+  initApp();
 </script>
 </body>
 </html>

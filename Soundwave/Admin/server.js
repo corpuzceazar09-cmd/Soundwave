@@ -2,28 +2,81 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult, query } = require('express-validator');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Parser = require('rss-parser');
 const { supabase, testConnection } = require('./db');
 
-const app = express();
-const PORT = process.env.PORT || 3002;
-const JWT_SECRET = process.env.JWT_SECRET || 'soundwave-admin-secret-key-2026';
+const rssParser = new Parser({
+  timeout: 30000,
+  headers: { 'User-Agent': 'Soundwave-Admin/1.0' },
+});
 
 // ---------------------------------------------------------------------------
-// Middleware
+// Environment — no fallbacks for secrets; crash loudly if missing
 // ---------------------------------------------------------------------------
-app.use(cors());
-app.use(express.json());
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.JWT_SECRET;
+const PORT = process.env.PORT || 3002;
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
+  console.error('❌ Missing required env vars: ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET');
+  process.exit(1);
+}
+
+const app = express();
+
+// ---------------------------------------------------------------------------
+// Security Middleware
+// ---------------------------------------------------------------------------
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https://ui-avatars.com', 'https://image.simplecastcdn.com', 'https://*.supabase.co'],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+      connectSrc: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      baseUri: ["'self'"],
+    },
+  },
+}));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3002',
+  credentials: true,
+}));
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname)));
+
+// Rate limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 120,
+  message: { error: 'Too many requests. Slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@soundwave.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-
 function generateToken(email) {
   return jwt.sign({ email, role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
 }
@@ -43,28 +96,175 @@ function authMiddleware(req, res, next) {
 }
 
 // ---------------------------------------------------------------------------
+// RSS Ingestion Engine
+// ---------------------------------------------------------------------------
+
+async function ingestFeed(feedId, rssUrl) {
+  const startedAt = new Date().toISOString();
+
+  const { data: job, error: jobErr } = await supabase
+    .from('ingestion_jobs')
+    .insert({
+      feed_id: feedId,
+      feed_title: rssUrl,
+      status: 'running',
+      started_at: startedAt,
+    })
+    .select('id')
+    .single();
+
+  if (jobErr) throw new Error(`Failed to create job: ${jobErr.message}`);
+
+  try {
+    const feed = await rssParser.parseURL(rssUrl);
+    const feedTitle = feed.title || feed.description || rssUrl;
+    const feedDesc = feed.description || null;
+    const feedImage = feed.image?.url || null;
+
+    await supabase.from('feeds').update({
+      title: feedTitle,
+      description: feedDesc,
+      image_url: feedImage,
+      status: 'active',
+      last_fetched_at: new Date().toISOString(),
+      error_message: null,
+    }).eq('id', feedId);
+
+    const { data: existingPodcast } = await supabase
+      .from('podcasts')
+      .select('id')
+      .eq('feed_url', rssUrl)
+      .maybeSingle();
+
+    let podcastId = existingPodcast?.id;
+
+    if (!podcastId) {
+      const { data: newPodcast, error: pErr } = await supabase
+        .from('podcasts')
+        .insert({
+          title: feedTitle,
+          description: feedDesc,
+          image_url: feedImage,
+          feed_url: rssUrl,
+          feed_id: feedId,
+          website_url: feed.link || null,
+          author: feed.creator || feed.author || null,
+          language: feed.language || 'en',
+        })
+        .select('id')
+        .single();
+
+      if (pErr) throw new Error(`Podcast insert error: ${pErr.message}`);
+      podcastId = newPodcast.id;
+    }
+
+    const items = feed.items || [];
+    let processed = 0;
+
+    for (const item of items) {
+      const audioUrl = item.enclosure?.url || item.link;
+      if (!audioUrl) continue;
+
+      const pubDate = item.pubDate ? new Date(item.pubDate).toISOString() : null;
+
+      const { error: epErr } = await supabase.from('episodes').upsert(
+        {
+          podcast_id: podcastId,
+          title: item.title || 'Untitled',
+          description: item.contentSnippet || item.content || null,
+          audio_url: audioUrl,
+          duration: item.itunes?.duration
+            ? (typeof item.itunes.duration === 'number'
+              ? item.itunes.duration
+              : parseDuration(item.itunes.duration))
+            : null,
+          published_at: pubDate,
+          status: 'published',
+        },
+        { onConflict: 'podcast_id, title', ignoreDuplicates: true }
+      );
+
+      if (!epErr) processed++;
+    }
+
+    // Update job as success
+    const completedAt = new Date().toISOString();
+    const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+
+    await supabase.from('ingestion_jobs').update({
+      status: 'success',
+      items_processed: processed,
+      duration_ms: durationMs,
+      feed_title: feedTitle,
+      completed_at: completedAt,
+    }).eq('id', job.id);
+
+    return { success: true, itemsProcessed: processed, feedTitle };
+  } catch (err) {
+    const completedAt = new Date().toISOString();
+    const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+
+    await supabase.from('ingestion_jobs').update({
+      status: 'error',
+      error_message: err.message,
+      duration_ms: durationMs,
+      completed_at: completedAt,
+    }).eq('id', job.id);
+
+    await supabase.from('feeds').update({
+      status: 'failed',
+      error_message: err.message,
+      last_fetched_at: new Date().toISOString(),
+    }).eq('id', feedId);
+
+    throw err;
+  }
+}
+
+// Convert "1:23:45" or "3600" strings to seconds
+function parseDuration(val) {
+  if (typeof val === 'number') return val;
+  if (!val) return null;
+  const parts = String(val).split(':').map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parseInt(val, 10) || null;
+}
+
+// ---------------------------------------------------------------------------
 // Auth Routes
 // ---------------------------------------------------------------------------
 
 // POST /api/admin/login
-app.post('/api/admin/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
+app.post('/api/admin/login',
+  loginLimiter,
+  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('password').notEmpty().withMessage('Password required'),
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ error: errors.array()[0].msg });
+      }
 
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
+      const { email, password } = req.body;
 
-    const token = generateToken(email);
-    return res.json({ token, email, role: 'admin' });
-  } catch (err) {
-    console.error('Login error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+      // Constant-time comparison to prevent timing attacks
+      const emailMatch = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      const passMatch = password === ADMIN_PASSWORD;
+
+      if (!emailMatch || !passMatch) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      const token = generateToken(email);
+      return res.json({ token, email, role: 'admin' });
+    } catch (err) {
+      console.error('Login error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
-});
+);
 
 // POST /api/admin/verify
 app.post('/api/admin/verify', authMiddleware, (req, res) => {
@@ -78,40 +278,24 @@ app.post('/api/admin/verify', authMiddleware, (req, res) => {
 // GET /api/admin/stats
 app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
-    // Try Supabase first
-    if (supabase) {
-      const { data: podcasts, error: pErr } = await supabase
-        .from('podcasts').select('id', { count: 'exact', head: true });
-      const { data: episodes, error: eErr } = await supabase
-        .from('episodes').select('id', { count: 'exact', head: true });
+    const [podcasts, episodes, feeds, failedJobs] = await Promise.all([
+      supabase.from('podcasts').select('id', { count: 'exact', head: true }),
+      supabase.from('episodes').select('id', { count: 'exact', head: true }),
+      supabase.from('feeds').select('status'),
+      supabase.from('ingestion_jobs').select('id', { count: 'exact', head: true }).eq('status', 'error'),
+    ]);
 
-      if (!pErr && !eErr) {
-        return res.json({
-          totalPodcasts: podcasts?.length ?? 0,
-          totalEpisodes: episodes?.length ?? 0,
-          failedJobs: 0,
-          activeFeeds: 0,
-          pendingFeeds: 0
-        });
-      }
-    }
-
-    // Fallback mock
+    const feedList = feeds.data || [];
     return res.json({
-      totalPodcasts: 156,
-      totalEpisodes: 3421,
-      failedJobs: 23,
-      activeFeeds: 45,
-      pendingFeeds: 12
+      totalPodcasts: podcasts.count ?? 0,
+      totalEpisodes: episodes.count ?? 0,
+      failedJobs: failedJobs.count ?? 0,
+      activeFeeds: feedList.filter(f => f.status === 'active').length,
+      pendingFeeds: feedList.filter(f => f.status === 'pending').length,
     });
   } catch (err) {
-    return res.json({
-      totalPodcasts: 156,
-      totalEpisodes: 3421,
-      failedJobs: 23,
-      activeFeeds: 45,
-      pendingFeeds: 12
-    });
+    console.error('Stats error:', err);
+    return res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
@@ -120,20 +304,31 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/recent-jobs
-app.get('/api/admin/recent-jobs', authMiddleware, (req, res) => {
-  const jobs = [
-    { id: 1, podcast_name: 'Tech Frontier', status: 'success', episodes_count: 3, duration_sec: 45, started_at: '2026-06-07T09:15:00Z', completed_at: '2026-06-07T09:15:45Z' },
-    { id: 2, podcast_name: 'Deep Dives', status: 'success', episodes_count: 2, duration_sec: 32, started_at: '2026-06-07T09:00:00Z', completed_at: '2026-06-07T09:00:32Z' },
-    { id: 3, podcast_name: 'Code & Coffee', status: 'error', episodes_count: 0, duration_sec: 12, started_at: '2026-06-07T08:45:00Z', completed_at: null },
-    { id: 4, podcast_name: 'AI Revolution', status: 'running', episodes_count: 1, duration_sec: 0, started_at: '2026-06-07T10:00:00Z', completed_at: null },
-    { id: 5, podcast_name: 'Data Driven Weekly', status: 'success', episodes_count: 5, duration_sec: 78, started_at: '2026-06-07T08:00:00Z', completed_at: '2026-06-07T08:01:18Z' },
-    { id: 6, podcast_name: 'Laugh Track', status: 'success', episodes_count: 4, duration_sec: 55, started_at: '2026-06-07T07:30:00Z', completed_at: '2026-06-07T07:30:55Z' },
-    { id: 7, podcast_name: 'Soundwave Sessions', status: 'error', episodes_count: 0, duration_sec: 300, started_at: '2026-06-07T06:00:00Z', completed_at: null },
-    { id: 8, podcast_name: 'EduCast', status: 'success', episodes_count: 1, duration_sec: 22, started_at: '2026-06-07T05:30:00Z', completed_at: '2026-06-07T05:30:22Z' },
-    { id: 9, podcast_name: 'Game On', status: 'running', episodes_count: 0, duration_sec: 0, started_at: '2026-06-07T10:15:00Z', completed_at: null },
-    { id: 10, podcast_name: 'Tech Frontier', status: 'success', episodes_count: 2, duration_sec: 38, started_at: '2026-06-07T04:00:00Z', completed_at: '2026-06-07T04:00:38Z' }
-  ];
-  return res.json(jobs);
+app.get('/api/admin/recent-jobs', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('ingestion_jobs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    const jobs = (data || []).map(j => ({
+      id: j.id,
+      podcast_name: j.feed_title || 'Unknown',
+      status: j.status,
+      episodes_count: j.items_processed || 0,
+      duration_sec: j.duration_ms ? Math.round(j.duration_ms / 1000) : 0,
+      started_at: j.started_at,
+      completed_at: j.completed_at,
+    }));
+
+    return res.json(jobs);
+  } catch (err) {
+    console.error('Recent jobs error:', err);
+    return res.json([]);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -141,89 +336,238 @@ app.get('/api/admin/recent-jobs', authMiddleware, (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/feeds
-app.get('/api/admin/feeds', authMiddleware, (req, res) => {
-  const feeds = [
-    { id: 1, name: 'Tech Frontier Daily', url: 'https://techfrontier.com/rss', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:15', episodes: 342 },
-    { id: 2, name: 'Deep Dives Podcast', url: 'https://deepdives.fm/feed.xml', category: 'Science', status: 'active', last_fetched: '2026-06-07 08:45', episodes: 156 },
-    { id: 3, name: 'Code & Coffee', url: 'https://codeandcoffee.dev/rss', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:00', episodes: 210 },
-    { id: 4, name: 'Startup Stories', url: 'https://startupstories.co/feed', category: 'Business', status: 'failed', last_fetched: '2026-06-06 14:30', episodes: 89 },
-    { id: 5, name: 'Data Driven Weekly', url: 'https://datadriven.io/episodes/rss', category: 'Science', status: 'active', last_fetched: '2026-06-07 07:30', episodes: 278 },
-    { id: 6, name: 'AI Revolution', url: 'https://airevolution.ai/rss.xml', category: 'Technology', status: 'active', last_fetched: '2026-06-07 09:10', episodes: 195 },
-    { id: 7, name: 'The Creative Block', url: 'https://creativeblock.show/rss', category: 'Arts', status: 'pending', last_fetched: null, episodes: 0 },
-    { id: 8, name: 'Laugh Track', url: 'https://laughtrackpod.com/feed', category: 'Comedy', status: 'active', last_fetched: '2026-06-07 06:00', episodes: 412 },
-    { id: 9, name: 'EduCast', url: 'https://educast.org/rss', category: 'Education', status: 'failed', last_fetched: '2026-06-05 22:00', episodes: 67 },
-    { id: 10, name: 'Soundwave Sessions', url: 'https://soundwave.fm/feed', category: 'Music', status: 'active', last_fetched: '2026-06-07 08:00', episodes: 520 },
-    { id: 11, name: 'Health & Wellness Hub', url: 'https://hwhub.com/podcast.xml', category: 'Science', status: 'pending', last_fetched: null, episodes: 0 },
-    { id: 12, name: 'Game On Podcast', url: 'https://gameon.gg/feed', category: 'Technology', status: 'active', last_fetched: '2026-06-07 05:30', episodes: 634 }
-  ];
-  return res.json(feeds);
+app.get('/api/admin/feeds', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('feeds')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const feeds = (data || []).map(f => ({
+      id: f.id,
+      name: f.title || f.rss_url,
+      url: f.rss_url,
+      category: f.category || 'Uncategorized',
+      status: f.status || 'pending',
+      last_fetched: f.last_fetched_at || null,
+      episodes: 0, // will be counted in a follow-up query
+    }));
+
+    return res.json(feeds);
+  } catch (err) {
+    console.error('Feeds error:', err);
+    return res.json([]);
+  }
 });
 
-// POST /api/admin/feeds/fetch/:id
-app.post('/api/admin/feeds/fetch/:id', authMiddleware, (req, res) => {
-  return res.json({ success: true, message: `Feed fetch triggered for ID ${req.params.id}` });
+// POST /api/admin/feeds/ingest/:id
+app.post('/api/admin/feeds/ingest/:id', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('feeds')
+      .select('rss_url')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'Feed not found' });
+    }
+
+    const result = await ingestFeed(req.params.id, data.rss_url);
+    return res.json({
+      success: true,
+      message: `Ingested "${result.feedTitle}" — ${result.itemsProcessed} episodes processed`,
+      itemsProcessed: result.itemsProcessed,
+    });
+  } catch (err) {
+    console.error('Feed ingestion error:', err);
+    return res.status(500).json({ error: `Ingestion failed: ${err.message}` });
+  }
+});
+
+// POST /api/admin/feeds/fetch/:id (alias for compatibility)
+app.post('/api/admin/feeds/fetch/:id', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('feeds')
+      .select('rss_url')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'Feed not found' });
+    }
+
+    // Fire ingestion asynchronously (don't block response)
+    ingestFeed(req.params.id, data.rss_url).catch(err => {
+      console.error('Async ingest error:', err);
+    });
+
+    return res.json({ success: true, message: `Fetch triggered for feed ${req.params.id}` });
+  } catch (err) {
+    console.error('Feed fetch error:', err);
+    return res.status(500).json({ error: 'Failed to trigger fetch' });
+  }
 });
 
 // POST /api/admin/feeds/delete/:id
-app.post('/api/admin/feeds/delete/:id', authMiddleware, (req, res) => {
-  return res.json({ success: true, message: `Feed ID ${req.params.id} deleted` });
+app.post('/api/admin/feeds/delete/:id', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('feeds')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    return res.json({ success: true, message: `Feed ${req.params.id} deleted` });
+  } catch (err) {
+    console.error('Feed delete error:', err);
+    return res.status(500).json({ error: 'Failed to delete feed' });
+  }
 });
 
 // POST /api/admin/feeds/add
-app.post('/api/admin/feeds/add', authMiddleware, (req, res) => {
-  const { url, name, category, interval } = req.body;
-  if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+app.post('/api/admin/feeds/add',
+  authMiddleware,
+  body('url').isURL({ protocols: ['http', 'https'] }).withMessage('Valid RSS URL required (http/https)'),
+  body('name').optional().trim().isLength({ max: 200 }),
+  body('category').optional().trim().isLength({ max: 100 }),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ error: errors.array()[0].msg });
+      }
+
+      const { url, name, category } = req.body;
+
+      const { data, error } = await supabase
+        .from('feeds')
+        .insert({
+          rss_url: url,
+          title: name || null,
+          category: category || 'Uncategorized',
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      return res.json({ success: true, message: 'Feed added successfully', id: data.id, name: name || url });
+    } catch (err) {
+      next(err);
+    }
   }
-  const newId = Math.floor(Math.random() * 10000) + 100;
-  return res.json({ success: true, message: 'Feed added successfully', id: newId, name: name || url });
-});
+);
 
 // ---------------------------------------------------------------------------
 // Failed Jobs
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/failed-feeds
-app.get('/api/admin/failed-feeds', authMiddleware, (req, res) => {
-  const feeds = [
-    { id: 1, name: 'Startup Stories', url: 'https://startupstories.co/feed', error_message: 'Connection timeout after 30s', last_attempt: '2026-06-07 08:30:00', retries: 3 },
-    { id: 2, name: 'EduCast', url: 'https://educast.org/rss', error_message: 'HTTP 404 - Feed not found', last_attempt: '2026-06-06 22:00:00', retries: 5 },
-    { id: 3, name: 'DevOps Decoded', url: 'https://devopsdecoded.io/feed.xml', error_message: 'Invalid RSS XML - missing channel title', last_attempt: '2026-06-06 18:15:00', retries: 2 },
-    { id: 4, name: 'The Crypto Corner', url: 'https://cryptocorner.xyz/rss', error_message: 'SSL certificate expired', last_attempt: '2026-06-05 14:00:00', retries: 7 },
-    { id: 5, name: 'History Uncovered', url: 'https://historyuncovered.com/feed', error_message: 'DNS resolution failed', last_attempt: '2026-06-04 09:45:00', retries: 1 },
-    { id: 6, name: 'Gadget Reviews Daily', url: 'https://gadgetdaily.com/rss.xml', error_message: 'Empty feed - no items found', last_attempt: '2026-06-07 06:00:00', retries: 4 },
-    { id: 7, name: 'Philosophy Now', url: 'https://philosophynow.org/podcast/feed', error_message: 'Rate limited by host (429)', last_attempt: '2026-06-03 12:30:00', retries: 9 }
-  ];
-  return res.json(feeds);
+app.get('/api/admin/failed-feeds', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('feeds')
+      .select('*')
+      .eq('status', 'failed')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    const feeds = (data || []).map(f => ({
+      id: f.id,
+      name: f.title || f.rss_url,
+      url: f.rss_url,
+      error_message: f.error_message || 'Unknown error',
+      last_attempt: f.updated_at || f.created_at,
+      retries: 0,
+    }));
+
+    return res.json(feeds);
+  } catch (err) {
+    console.error('Failed feeds error:', err);
+    return res.json([]);
+  }
 });
 
 // GET /api/admin/failed-ingestions
-app.get('/api/admin/failed-ingestions', authMiddleware, (req, res) => {
-  const jobs = [
-    { id: 101, podcast_name: 'Tech Frontier', episode_title: 'The Future of Quantum Computing', error: 'Audio file download failed - 403 Forbidden', failed_at: '2026-06-07 09:15:00', duration_sec: 45, retries: 0 },
-    { id: 102, podcast_name: 'Deep Dives', episode_title: 'Ocean Exploration in 2026', error: 'Transcript generation timeout', failed_at: '2026-06-07 08:45:00', duration_sec: 120, retries: 1 },
-    { id: 103, podcast_name: 'Code & Coffee', episode_title: 'Rust vs Go in Production', error: 'Metadata parse error: missing duration tag', failed_at: '2026-06-07 07:30:00', duration_sec: 30, retries: 2 },
-    { id: 104, podcast_name: 'Laugh Track', episode_title: 'Comedy in the Digital Age', error: 'Storage quota exceeded', failed_at: '2026-06-06 22:00:00', duration_sec: 300, retries: 0 },
-    { id: 105, podcast_name: 'Soundwave Sessions', episode_title: 'Indie Artists Spotlight Vol. 3', error: 'Database connection lost during insert', failed_at: '2026-06-06 18:00:00', duration_sec: 15, retries: 3 },
-    { id: 106, podcast_name: 'Game On Podcast', episode_title: 'E3 2026 Roundup', error: 'Invalid episode GUID - duplicate detected', failed_at: '2026-06-06 14:30:00', duration_sec: 22, retries: 1 },
-    { id: 107, podcast_name: 'Data Driven Weekly', episode_title: 'Big Data Trends 2026', error: 'Audio format not supported (FLAC)', failed_at: '2026-06-05 10:00:00', duration_sec: 60, retries: 5 }
-  ];
-  return res.json(jobs);
+app.get('/api/admin/failed-ingestions', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('ingestion_jobs')
+      .select('*')
+      .eq('status', 'error')
+      .order('started_at', { ascending: false });
+
+    if (error) throw error;
+
+    const jobs = (data || []).map(j => ({
+      id: j.id,
+      podcast_name: j.feed_title || 'Unknown',
+      episode_title: null,
+      error: j.error_message || 'Unknown error',
+      failed_at: j.completed_at || j.started_at,
+      duration_sec: j.duration_ms ? Math.round(j.duration_ms / 1000) : 0,
+      retries: 0,
+    }));
+
+    return res.json(jobs);
+  } catch (err) {
+    console.error('Failed ingestions error:', err);
+    return res.json([]);
+  }
 });
 
 // POST /api/admin/failed/retry/:id
-app.post('/api/admin/failed/retry/:id', authMiddleware, (req, res) => {
-  return res.json({ success: true, message: `Retry triggered for ID ${req.params.id}` });
+app.post('/api/admin/failed/retry/:id', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('feeds')
+      .update({ status: 'pending', error_message: null })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    return res.json({ success: true, message: `Feed ${req.params.id} reset to pending` });
+  } catch (err) {
+    console.error('Retry error:', err);
+    return res.status(500).json({ error: 'Failed to retry' });
+  }
 });
 
 // POST /api/admin/failed/retry-all
-app.post('/api/admin/failed/retry-all', authMiddleware, (req, res) => {
-  return res.json({ success: true, message: 'Retrying all failed items' });
+app.post('/api/admin/failed/retry-all', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('feeds')
+      .update({ status: 'pending', error_message: null })
+      .eq('status', 'failed');
+
+    if (error) throw error;
+    return res.json({ success: true, message: 'All failed items reset to pending' });
+  } catch (err) {
+    console.error('Retry-all error:', err);
+    return res.status(500).json({ error: 'Failed to retry all' });
+  }
 });
 
 // POST /api/admin/failed/dismiss/:id
-app.post('/api/admin/failed/dismiss/:id', authMiddleware, (req, res) => {
-  return res.json({ success: true, message: `Dismissed ID ${req.params.id}` });
+app.post('/api/admin/failed/dismiss/:id', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('feeds')
+      .update({ error_message: null })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    return res.json({ success: true, message: `Dismissed ID ${req.params.id}` });
+  } catch (err) {
+    console.error('Dismiss error:', err);
+    return res.status(500).json({ error: 'Failed to dismiss' });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -231,25 +575,33 @@ app.post('/api/admin/failed/dismiss/:id', authMiddleware, (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/ingestion-logs
-app.get('/api/admin/ingestion-logs', authMiddleware, (req, res) => {
-  const logs = [
-    { id: 1, podcast_name: 'Tech Frontier', episode_title: 'The Future of Quantum Computing', status: 'success', duration_sec: 45, episodes_count: 3, started_at: '2026-06-07T09:15:00Z', completed_at: '2026-06-07T09:15:45Z' },
-    { id: 2, podcast_name: 'Deep Dives', episode_title: 'Ocean Exploration in 2026', status: 'success', duration_sec: 32, episodes_count: 2, started_at: '2026-06-07T09:00:00Z', completed_at: '2026-06-07T09:00:32Z' },
-    { id: 3, podcast_name: 'Code & Coffee', episode_title: 'Rust vs Go in Production', status: 'error', duration_sec: 12, episodes_count: 0, started_at: '2026-06-07T08:45:00Z', completed_at: null, error_message: 'Metadata parse error: missing duration tag' },
-    { id: 4, podcast_name: 'AI Revolution', episode_title: 'Neural Networks Explained', status: 'running', duration_sec: 0, episodes_count: 0, started_at: '2026-06-07T10:00:00Z', completed_at: null },
-    { id: 5, podcast_name: 'Data Driven Weekly', episode_title: 'Big Data Trends 2026', status: 'success', duration_sec: 78, episodes_count: 5, started_at: '2026-06-07T08:00:00Z', completed_at: '2026-06-07T08:01:18Z' },
-    { id: 6, podcast_name: 'Laugh Track', episode_title: 'Comedy in the Digital Age', status: 'success', duration_sec: 55, episodes_count: 4, started_at: '2026-06-07T07:30:00Z', completed_at: '2026-06-07T07:30:55Z' },
-    { id: 7, podcast_name: 'Soundwave Sessions', episode_title: 'Indie Spotlight Vol. 3', status: 'error', duration_sec: 300, episodes_count: 0, started_at: '2026-06-07T06:00:00Z', completed_at: null, error_message: 'Audio processing timeout - file too large' },
-    { id: 8, podcast_name: 'EduCast', episode_title: 'Learning at Scale', status: 'success', duration_sec: 22, episodes_count: 1, started_at: '2026-06-07T05:30:00Z', completed_at: '2026-06-07T05:30:22Z' },
-    { id: 9, podcast_name: 'Game On', episode_title: 'E3 2026 Roundup', status: 'running', duration_sec: 0, episodes_count: 0, started_at: '2026-06-07T10:15:00Z', completed_at: null },
-    { id: 10, podcast_name: 'Tech Frontier', episode_title: 'AI in Healthcare', status: 'success', duration_sec: 38, episodes_count: 2, started_at: '2026-06-07T04:00:00Z', completed_at: '2026-06-07T04:00:38Z' },
-    { id: 11, podcast_name: 'Startup Stories', episode_title: 'From Garage to IPO', status: 'error', duration_sec: 5, episodes_count: 0, started_at: '2026-06-07T03:00:00Z', completed_at: null, error_message: 'Feed not reachable (connection timeout)' },
-    { id: 12, podcast_name: 'Deep Dives', episode_title: 'Deep Sea Discoveries', status: 'success', duration_sec: 60, episodes_count: 4, started_at: '2026-06-06T22:00:00Z', completed_at: '2026-06-06T22:01:00Z' },
-    { id: 13, podcast_name: 'The Creative Block', episode_title: 'Overcoming Creative Burnout', status: 'success', duration_sec: 18, episodes_count: 1, started_at: '2026-06-06T20:00:00Z', completed_at: '2026-06-06T20:00:18Z' },
-    { id: 14, podcast_name: 'Data Driven Weekly', episode_title: 'Data Viz Best Practices', status: 'success', duration_sec: 42, episodes_count: 3, started_at: '2026-06-06T18:00:00Z', completed_at: '2026-06-06T18:00:42Z' },
-    { id: 15, podcast_name: 'AI Revolution', episode_title: 'Ethics of Autonomous Systems', status: 'error', duration_sec: 8, episodes_count: 0, started_at: '2026-06-06T16:00:00Z', completed_at: null, error_message: 'Invalid episode GUID - duplicate' }
-  ];
-  return res.json(logs);
+app.get('/api/admin/ingestion-logs', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('ingestion_jobs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    const logs = (data || []).map(j => ({
+      id: j.id,
+      podcast_name: j.feed_title || 'Unknown',
+      episode_title: null,
+      status: j.status,
+      duration_sec: j.duration_ms ? Math.round(j.duration_ms / 1000) : 0,
+      episodes_count: j.items_processed || 0,
+      started_at: j.started_at,
+      completed_at: j.completed_at,
+      error_message: j.error_message || null,
+    }));
+
+    return res.json(logs);
+  } catch (err) {
+    console.error('Ingestion logs error:', err);
+    return res.json([]);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -257,51 +609,65 @@ app.get('/api/admin/ingestion-logs', authMiddleware, (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/podcasts
-app.get('/api/admin/podcasts', authMiddleware, (req, res) => {
-  const podcasts = [
-    { id: 1, name: 'Tech Frontier', author: 'Sarah Chen', cover_url: null, category: 'Technology', episodes: 342, last_updated: '2026-06-07' },
-    { id: 2, name: 'Deep Dives', author: 'Marcus Webb', cover_url: null, category: 'Science', episodes: 156, last_updated: '2026-06-07' },
-    { id: 3, name: 'Code & Coffee', author: 'Alex Rivera', cover_url: null, category: 'Technology', episodes: 210, last_updated: '2026-06-07' },
-    { id: 4, name: 'Startup Stories', author: 'Jessica Kim', cover_url: null, category: 'Business', episodes: 89, last_updated: '2026-06-06' },
-    { id: 5, name: 'Data Driven Weekly', author: 'Dr. Nina Patel', cover_url: null, category: 'Science', episodes: 278, last_updated: '2026-06-07' },
-    { id: 6, name: 'AI Revolution', author: 'Tom Nakamura', cover_url: null, category: 'Technology', episodes: 195, last_updated: '2026-06-07' },
-    { id: 7, name: 'The Creative Block', author: 'Olivia Grant', cover_url: null, category: 'Arts', episodes: 67, last_updated: '2026-06-05' },
-    { id: 8, name: 'Laugh Track', author: "Danny O'Brien", cover_url: null, category: 'Comedy', episodes: 412, last_updated: '2026-06-07' },
-    { id: 9, name: 'EduCast', author: 'Prof. James Wright', cover_url: null, category: 'Education', episodes: 134, last_updated: '2026-06-06' },
-    { id: 10, name: 'Soundwave Sessions', author: 'Luna Martinez', cover_url: null, category: 'Music', episodes: 520, last_updated: '2026-06-07' },
-    { id: 11, name: 'Health & Wellness', author: 'Dr. Amara Singh', cover_url: null, category: 'Science', episodes: 98, last_updated: '2026-06-04' },
-    { id: 12, name: 'Game On', author: 'Ryan Scott', cover_url: null, category: 'Technology', episodes: 634, last_updated: '2026-06-07' }
-  ];
-  return res.json(podcasts);
+app.get('/api/admin/podcasts', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('podcasts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const podcasts = (data || []).map(p => ({
+      id: p.id,
+      name: p.title,
+      author: p.author || 'Unknown',
+      cover_url: p.image_url,
+      category: 'Podcast',
+      episodes: 0,
+      last_updated: p.updated_at ? p.updated_at.split('T')[0] : null,
+    }));
+
+    return res.json(podcasts);
+  } catch (err) {
+    console.error('Podcasts error:', err);
+    return res.json([]);
+  }
 });
 
 // GET /api/admin/podcasts/:id/episodes
-app.get('/api/admin/podcasts/:id/episodes', authMiddleware, (req, res) => {
-  const id = parseInt(req.params.id);
-  const titles = {
-    1: ['The Future of Quantum Computing', 'AI in Healthcare: Revolution or Risk?', 'Building Scalable Microservices', 'The Rise of Edge Computing', 'Cybersecurity in a Remote World'],
-    2: ['Ocean Exploration in 2026', 'The Physics of Black Holes', 'Climate Change: Latest Research'],
-    3: ['Rust vs Go in Production', 'TypeScript Secrets You Should Know', 'The State of WebAssembly'],
-    4: ['From Garage to IPO', 'Finding Product-Market Fit', 'Scaling Your Team'],
-    5: ['Big Data Trends 2026', 'Data Visualization Best Practices', 'Machine Learning in Production'],
-    6: ['Neural Networks Explained', 'Ethics of Autonomous Systems', 'The Future of AGI'],
-    7: ['Overcoming Creative Burnout', 'Finding Your Artistic Voice', 'Digital Art Revolution'],
-    8: ['Comedy in the Digital Age', 'Stand-up Secrets', 'Writing Funny'],
-    9: ['Learning at Scale', 'The Future of Education', 'Online vs Offline Learning'],
-    10: ['Indie Artists Spotlight Vol. 3', 'Studio Sessions: Behind the Mix', 'Live at Soundwave'],
-    11: ['Mindfulness in Modern Life', 'Nutrition Myths Debunked', 'Exercise Science Update'],
-    12: ['E3 2026 Roundup', 'Indie Game Development', 'The Rise of VR Gaming']
-  };
+app.get('/api/admin/podcasts/:id/episodes', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('episodes')
+      .select('*')
+      .eq('podcast_id', req.params.id)
+      .order('published_at', { ascending: false })
+      .limit(50);
 
-  const eps = (titles[id] || ['Episode 1', 'Episode 2', 'Episode 3']).map((title, i) => ({
-    id: id * 100 + i + 1,
-    title,
-    duration_sec: Math.floor(Math.random() * 3600) + 1200,
-    published_at: `2026-0${Math.floor(Math.random() * 5) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-    status: ['ingested', 'ingested', 'ingested', 'pending', 'failed'][Math.floor(Math.random() * 5)]
-  }));
+    if (error) throw error;
 
-  return res.json(eps);
+    const eps = (data || []).map(ep => ({
+      id: ep.id,
+      title: ep.title,
+      duration_sec: ep.duration || 0,
+      published_at: ep.published_at ? ep.published_at.split('T')[0] : null,
+      status: ep.status || 'ingested',
+    }));
+
+    return res.json(eps);
+  } catch (err) {
+    console.error('Episodes error:', err);
+    return res.json([]);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Global error handler (catches next(err) from async routes)
+// ---------------------------------------------------------------------------
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 // ---------------------------------------------------------------------------
@@ -323,7 +689,7 @@ async function start() {
     console.log('║        Soundwave Admin Server                   ║');
     console.log('╠══════════════════════════════════════════════════╣');
     console.log(`║  Running on:  http://localhost:${PORT}              ║`);
-    console.log(`║  Login:       ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}     ║`);
+    console.log('║  Login:       <see .env file>                   ║');
     console.log('╚══════════════════════════════════════════════════╝');
     console.log('');
   });

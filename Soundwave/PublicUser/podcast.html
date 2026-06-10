@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SoundWave - Podcast</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --sidebar: 240px; --player-h: 80px; --topbar-h: 64px; }
@@ -129,9 +128,9 @@
     <nav class="sidebar-nav">
       <button class="nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
       <button class="nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Discover</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+      <button class="nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+      <button class="nav-item" onclick="location.href='/subscriptions'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
+      <button class="nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
       <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
     </nav>
     <div class="sidebar-footer">
@@ -214,12 +213,11 @@
   <nav class="mobile-nav">
     <button class="mobile-nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
     <button class="mobile-nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Explore</button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-    <button class="mobile-nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+    <button class="mobile-nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+    <button class="mobile-nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
   </nav>
 
 <script>
-  var currentUser = null;
   var podcastId = null;
   var podcastData = null;
 
@@ -234,29 +232,19 @@
     return colors[idx];
   }
 
-  async function initFirebase() {
-    try {
-      var resp = await fetch('/api/config');
-      var config = await resp.json();
-      firebase.initializeApp(config);
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) { currentUser = user; loadPodcast(); }
-        else { window.location.href = '/auth'; }
-      });
-    } catch (err) {
-      console.error('[Init]', err);
-      document.getElementById('loadingOverlay').querySelector('p').textContent = 'Connection failed...';
-      setTimeout(function() { window.location.href = '/auth'; }, 1500);
-    }
+  function initApp() {
+    var user = PUBLIC_API.getUser();
+    if (!user) { PUBLIC_API.logout(); return; }
+    loadPodcast(user);
   }
 
-  async function loadPodcast() {
+  async function loadPodcast(user) {
     var params = new URLSearchParams(window.location.search);
     podcastId = params.get('id');
     if (!podcastId) { window.location.href = '/home'; return; }
 
-    document.querySelector('.avatar').textContent = (currentUser.displayName || currentUser.email || 'U')[0].toUpperCase();
-    document.getElementById('signOutBtn').addEventListener('click', function() { firebase.auth().signOut(); });
+    document.querySelector('.avatar').textContent = (user.display_name || user.email || 'U')[0].toUpperCase();
+    document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
     document.querySelector('.avatar').addEventListener('click', function() { location.href = '/profile'; });
 
     try {
@@ -322,20 +310,13 @@
 
   function playEpisode(episodeId, title) {
     console.log('Playing episode:', episodeId, title);
-    if (currentUser) {
-      fetch('/api/activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUser.uid, episode_id: episodeId, podcast_id: podcastId, action: 'played' })
-      }).catch(function(e) { console.warn('[Activity]', e); });
-    }
+    PUBLIC_API.post('/api/activity', { episode_id: episodeId, podcast_id: podcastId, action: 'played' })
+      .catch(function(e) { console.warn('[Activity]', e); });
   }
 
   // Rating
   function loadUserRating() {
-    if (!currentUser) return;
-    fetch('/api/ratings/' + currentUser.uid + '/' + podcastId)
-      .then(function(r) { return r.json(); })
+    PUBLIC_API.get('/api/ratings/' + encodeURIComponent(podcastId))
       .then(function(json) {
         if (json.data && json.data.rating) {
           renderStars(json.data.rating);
@@ -361,22 +342,14 @@
   }
 
   function submitRating(rating) {
-    if (!currentUser) return;
-    fetch('/api/ratings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: currentUser.uid, podcast_id: podcastId, rating: rating })
-    })
-    .then(function(r) { return r.json(); })
+    PUBLIC_API.post('/api/ratings', { podcast_id: podcastId, rating: rating })
     .then(function() { renderStars(rating); })
     .catch(function(e) { console.warn('[Rating]', e); });
   }
 
   // Follow
   function checkFollowStatus() {
-    if (!currentUser) return;
-    fetch('/api/follows/' + currentUser.uid)
-      .then(function(r) { return r.json(); })
+    PUBLIC_API.get('/api/follows')
       .then(function(json) {
         var list = json.data || [];
         var isFollowing = list.some(function(p) { return p.id === podcastId; });
@@ -393,13 +366,7 @@
   }
 
   function toggleFollow(follow) {
-    if (!currentUser) return;
-    fetch('/api/follows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: currentUser.uid, podcast_id: podcastId, follow: follow })
-    })
-    .then(function(r) { return r.json(); })
+    PUBLIC_API.post('/api/follows', { podcast_id: podcastId, follow: follow })
     .then(function() { updateFollowBtn(follow); })
     .catch(function(e) { console.warn('[Follow]', e); });
   }
@@ -413,7 +380,7 @@
     });
   });
 
-  initFirebase();
+  initApp();
 </script>
 </body>
 </html>

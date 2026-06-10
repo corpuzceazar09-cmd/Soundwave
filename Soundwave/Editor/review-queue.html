@@ -6,6 +6,7 @@
   <title>Review Queue - Podcast Editor</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -20,14 +21,17 @@
         <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
         </div>
       </div>
     </aside>
@@ -78,61 +82,7 @@
         </div>
 
         <div class="review-grid" id="reviewGrid" style="display:none">
-          <div class="rg-card">
-            <div class="rg-top">
-              <div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div>
-              <div class="rg-badge"><span class="badge badge-blue"><span class="badge-dot"></span> In Review</span></div>
-            </div>
-            <div class="rg-title">Digital Frontier Echoes</div>
-            <div class="rg-pub">Apex Media Networks</div>
-            <div class="rg-rss"><i class="fa-solid fa-rss"></i> https://feeds.apex.media/d...</div>
-            <div class="rg-date">Oct 24, 2023 · 09:12 AM</div>
-            <button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location='/rich-editor'">Review</button>
-          </div>
-          <div class="rg-card">
-            <div class="rg-top">
-              <div class="pod-icon" style="background:#1e293b;color:#94a3b8"><i class="fa-solid fa-server"></i></div>
-              <div class="rg-badge"><span class="badge badge-red"><span class="badge-dot"></span> Needs Info</span></div>
-            </div>
-            <div class="rg-title">The Silent Capital</div>
-            <div class="rg-pub">Independent Publisher</div>
-            <div class="rg-rss"><i class="fa-solid fa-rss"></i> https://anchor.fm/s/silent-c...</div>
-            <div class="rg-date">Oct 24, 2023 · 08:45 AM</div>
-            <button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location='/rich-editor'">Review</button>
-          </div>
-          <div class="rg-card">
-            <div class="rg-top">
-              <div class="pod-icon" style="background:#334155;color:#cbd5e1"><i class="fa-solid fa-ghost"></i></div>
-              <div class="rg-badge"><span class="badge badge-gray"><span class="badge-dot"></span> New</span></div>
-            </div>
-            <div class="rg-title">Urban Legends Decoded</div>
-            <div class="rg-pub">Mythos Audio Collective</div>
-            <div class="rg-rss"><i class="fa-solid fa-rss"></i> https://mythos.io/feeds/urb...</div>
-            <div class="rg-date">Oct 23, 2023 · 11:20 PM</div>
-            <button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location='/rich-editor'">Review</button>
-          </div>
-          <div class="rg-card">
-            <div class="rg-top">
-              <div class="pod-icon" style="background:#020617;color:#3b82f6"><i class="fa-solid fa-wave-square"></i></div>
-              <div class="rg-badge"><span class="badge badge-blue"><span class="badge-dot"></span> In Review</span></div>
-            </div>
-            <div class="rg-title">The Weekly Grind</div>
-            <div class="rg-pub">Startup Foundry</div>
-            <div class="rg-rss"><i class="fa-solid fa-rss"></i> https://startupfoundry.com/...</div>
-            <div class="rg-date">Oct 23, 2023 · 04:30 PM</div>
-            <button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location='/rich-editor'">Review</button>
-          </div>
-          <div class="rg-card">
-            <div class="rg-top">
-              <div class="pod-icon" style="background:#0c1a2e;color:#60a5fa"><i class="fa-solid fa-satellite-dish"></i></div>
-              <div class="rg-badge"><span class="badge badge-gray"><span class="badge-dot"></span> New</span></div>
-            </div>
-            <div class="rg-title">Future Tech Now</div>
-            <div class="rg-pub">BroadcastX Media</div>
-            <div class="rg-rss"><i class="fa-solid fa-rss"></i> https://bx.media/PodFeed...</div>
-            <div class="rg-date">Oct 23, 2023 · 01:15 PM</div>
-            <button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location='/rich-editor'">Review</button>
-          </div>
+          <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
         </div>
 
         <table class="data-table" id="reviewTable">
@@ -146,66 +96,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                <div class="podcast-info">
-                  <div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div>
-                  <div><div class="podcast-title">Digital Frontier Echoes</div><div class="podcast-publisher">Apex Media Networks</div></div>
-                </div>
-              </td>
-              <td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>https://feeds.apex.media/d...</a></td>
-              <td><div class="date-cell">Oct 24, 2023 ·</div><div class="date-time">09:12 AM</div></td>
-              <td><span class="badge badge-blue"><span class="badge-dot"></span> In Review</span></td>
-              <td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location='/rich-editor'">Review</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-info">
-                  <div class="pod-icon" style="background:#1e293b;color:#94a3b8"><i class="fa-solid fa-server"></i></div>
-                  <div><div class="podcast-title">The Silent Capital</div><div class="podcast-publisher">Independent Publisher</div></div>
-                </div>
-              </td>
-              <td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>https://anchor.fm/s/silent-c...</a></td>
-              <td><div class="date-cell">Oct 24, 2023 ·</div><div class="date-time">08:45 AM</div></td>
-              <td><span class="badge badge-red"><span class="badge-dot"></span> Needs Info</span></td>
-              <td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location='/rich-editor'">Review</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-info">
-                  <div class="pod-icon" style="background:#334155;color:#cbd5e1"><i class="fa-solid fa-ghost"></i></div>
-                  <div><div class="podcast-title">Urban Legends Decoded</div><div class="podcast-publisher">Mythos Audio Collective</div></div>
-                </div>
-              </td>
-              <td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>https://mythos.io/feeds/urb...</a></td>
-              <td><div class="date-cell">Oct 23, 2023 ·</div><div class="date-time">11:20 PM</div></td>
-              <td><span class="badge badge-gray"><span class="badge-dot"></span> New</span></td>
-              <td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location='/rich-editor'">Review</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-info">
-                  <div class="pod-icon" style="background:#020617;color:#3b82f6"><i class="fa-solid fa-wave-square"></i></div>
-                  <div><div class="podcast-title">The Weekly Grind</div><div class="podcast-publisher">Startup Foundry</div></div>
-                </div>
-              </td>
-              <td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>https://startupfoundry.com/...</a></td>
-              <td><div class="date-cell">Oct 23, 2023 ·</div><div class="date-time">04:30 PM</div></td>
-              <td><span class="badge badge-blue"><span class="badge-dot"></span> In Review</span></td>
-              <td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location='/rich-editor'">Review</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-info">
-                  <div class="pod-icon" style="background:#0c1a2e;color:#60a5fa"><i class="fa-solid fa-satellite-dish"></i></div>
-                  <div><div class="podcast-title">Future Tech Now</div><div class="podcast-publisher">BroadcastX Media</div></div>
-                </div>
-              </td>
-              <td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>https://bx.media/PodFeed...</a></td>
-              <td><div class="date-cell">Oct 23, 2023 ·</div><div class="date-time">01:15 PM</div></td>
-              <td><span class="badge badge-gray"><span class="badge-dot"></span> New</span></td>
-              <td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location='/rich-editor'">Review</button></td>
-            </tr>
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading review queue...</td></tr>
           </tbody>
         </table>
 
@@ -285,5 +176,85 @@
     });
     (function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var bold=i.querySelector('b'),cur=bold?parseInt(bold.textContent)||1:1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var m=parseInt(e.textContent.trim());if(!isNaN(m))e.classList.toggle('active',m===n)});if(bold)bold.textContent=n}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
   </script>
+    <script>
+requireAuth();
+(function() {
+  const user = EDITOR_API.getUser();
+  if (user) {
+    document.getElementById('sidebarEmail').textContent = user.email;
+    document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+    document.getElementById('sidebarUser').style.display = 'block';
+  }
+})();
+</script>
+<script>
+(function() {
+  // ---- LOAD REVIEW QUEUE ----
+  const tbody = document.querySelector('#reviewTable tbody');
+  const grid = document.getElementById('reviewGrid');
+  const filtersResults = document.querySelector('.filter-results');
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '\u2014';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' \u00b7 ' +
+      d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function createTableRow(item) {
+    const s = item.status || 'pending';
+    const sc = s === 'pending' ? 'badge-gray' : s === 'accepted' ? 'badge-green' : 'badge-blue';
+    const sl = s.charAt(0).toUpperCase() + s.slice(1);
+    const title = escapeHtml(item.episodes?.title || item.title || 'Untitled');
+    const pub = escapeHtml(item.episodes?.podcasts?.publisher || item.publisher || '\u2014');
+    const rss = item.episodes?.podcasts?.rss_feed || item.rss_feed || '';
+    const date = formatDate(item.created_at || item.ingested_date);
+    return '<tr>' +
+      '<td><div class="podcast-info"><div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div><div><div class="podcast-title">' + title + '</div><div class="podcast-publisher">' + pub + '</div></div></div></td>' +
+      '<td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>' + escapeHtml(rss.substring(0, 40)) + '...</a></td>' +
+      '<td><div class="date-cell">' + date + '</div></td>' +
+      '<td><span class="badge ' + sc + '"><span class="badge-dot"></span> ' + sl + '</span></td>' +
+      '<td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location=\'/rich-editor\'">Review</button></td>' +
+      '</tr>';
+  }
+
+  function createGridCard(item) {
+    const s = item.status || 'pending';
+    const sc = s === 'pending' ? 'badge-gray' : s === 'accepted' ? 'badge-green' : 'badge-blue';
+    const sl = s.charAt(0).toUpperCase() + s.slice(1);
+    const title = escapeHtml(item.episodes?.title || item.title || 'Untitled');
+    const pub = escapeHtml(item.episodes?.podcasts?.publisher || item.publisher || '\u2014');
+    const rss = item.episodes?.podcasts?.rss_feed || item.rss_feed || '';
+    const date = formatDate(item.created_at || item.ingested_date);
+    return '<div class="rg-card"><div class="rg-top"><div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div><div class="rg-badge"><span class="badge ' + sc + '"><span class="badge-dot"></span> ' + sl + '</span></div></div><div class="rg-title">' + title + '</div><div class="rg-pub">' + pub + '</div><div class="rg-rss"><i class="fa-solid fa-rss"></i> ' + escapeHtml(rss.substring(0, 35)) + '...</div><div class="rg-date">' + date + '</div><button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location=\'/rich-editor\'">Review</button></div>';
+  }
+
+  EDITOR_API.get('/api/review-queue')
+    .then(data => {
+      const items = data.items || data || [];
+      if (filtersResults) {
+        const pending = data.stats?.totalPending || items.length;
+        filtersResults.innerHTML = 'Showing ' + pending + ' pending review' + (pending !== 1 ? 's' : '');
+      }
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-gray)">No items in review queue</td></tr>';
+        grid.innerHTML = '';
+        return;
+      }
+      tbody.innerHTML = items.map(createTableRow).join('');
+      grid.innerHTML = items.map(createGridCard).join('');
+    })
+    .catch(err => {
+      console.error('Failed to load review queue:', err);
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load review queue</td></tr>';
+      grid.innerHTML = '';
+    });
+})();
+</script>
 </body>
 </html>

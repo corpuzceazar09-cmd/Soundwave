@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SoundWave - Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <!-- Firebase SDK (Auth only — data via internal API) -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="auth.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -212,7 +210,6 @@
         radial-gradient(ellipse at 60% 70%, rgba(129,140,248,0.08) 0%, transparent 50%);
       pointer-events: none;
     }
-    /* Mic stand decorative */
     .featured-mic {
       position: absolute;
       right: 40px;
@@ -827,20 +824,20 @@
         </svg>
         Discover
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/library'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/>
         </svg>
         Library
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/subscriptions'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m10 15 9-9M13 6h5v5"/>
           <path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>
         </svg>
         Subscriptions
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="location.href='/history'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <polyline points="12 6 12 12 16 14"/>
@@ -945,7 +942,7 @@
           <a href="#">See all</a>
         </div>
         <div class="carousel" id="trendingCarousel">
-          <!-- Populated by Firestore real-time listener or static fallback -->
+          <!-- Populated from /api/podcasts -->
         </div>
       </section>
 
@@ -956,7 +953,7 @@
           <a href="#">Browse all</a>
         </div>
         <div class="categories-grid" id="categoriesGrid">
-          <!-- Populated by Firestore real-time listener or static fallback -->
+          <!-- Populated from /api/categories -->
         </div>
       </section>
 
@@ -967,7 +964,7 @@
           <a href="#">View all</a>
         </div>
         <div class="episode-list" id="episodeList">
-          <!-- Populated by Firestore real-time listener or static fallback -->
+          <!-- Populated from /api/episodes/recent -->
         </div>
       </section>
 
@@ -1115,8 +1112,6 @@
   </nav>
 
 <script>
-  let currentUser = null;
-
   // ── Utility ──
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
@@ -1140,27 +1135,17 @@
     return arr[(id || '').split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % arr.length];
   }
 
-  // ── Firebase Auth ──
-  async function initFirebase() {
-    try {
-      var resp = await fetch('/api/config');
-      var config = await resp.json();
-      firebase.initializeApp(config);
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) { currentUser = user; onUserReady(user); }
-        else { window.location.href = '/auth'; }
-      });
-    } catch (err) {
-      console.error('[Init] Failed:', err);
-      document.getElementById('loadingOverlay').querySelector('p').textContent = 'Connection failed. Redirecting...';
-      setTimeout(function() { window.location.href = '/auth'; }, 1500);
+  // ── Auth Check ──
+  function initApp() {
+    var user = PUBLIC_API.getUser();
+    if (!user) {
+      PUBLIC_API.logout();
+      return;
     }
-  }
 
-  // ── On Auth Ready ──
-  function onUserReady(user) {
-    document.getElementById('userName').textContent = user.displayName || 'there';
-    document.getElementById('userAvatar').textContent = (user.displayName || user.email || 'U')[0].toUpperCase();
+    // Set user greeting
+    document.getElementById('userName').textContent = user.display_name || 'there';
+    document.getElementById('userAvatar').textContent = (user.display_name || user.email || 'U')[0].toUpperCase();
 
     loadFeaturedPodcast();
     loadPodcasts();
@@ -1170,27 +1155,22 @@
     document.getElementById('loadingOverlay').classList.add('hidden');
 
     // Sign Out
-    document.getElementById('signOutBtn').addEventListener('click', function() { firebase.auth().signOut(); });
+    document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
 
-    // Sidebar Navigation
-    var navBtns = document.querySelectorAll('.sidebar-nav .nav-item');
-    if (navBtns.length > 1) navBtns[1].addEventListener('click', function() { window.location.href = '/browse'; });
-    if (navBtns.length > 2) navBtns[2].addEventListener('click', function() { window.location.href = '/profile'; });
-    if (navBtns.length > 3) navBtns[3].addEventListener('click', function() { window.location.href = '/profile'; });
-    if (navBtns.length > 4) navBtns[4].addEventListener('click', function() { window.location.href = '/profile'; });
-
-    // Mobile nav
+    // Mobile nav links
     var mobileNavs = document.querySelectorAll('.mobile-nav-item');
     if (mobileNavs.length > 0) mobileNavs[0].classList.add('active');
     if (mobileNavs.length > 1) mobileNavs[1].addEventListener('click', function() { window.location.href = '/browse'; });
+    if (mobileNavs.length > 2) mobileNavs[2].addEventListener('click', function() { window.location.href = '/library'; });
+    if (mobileNavs.length > 3) mobileNavs[3].addEventListener('click', function() { window.location.href = '/history'; });
 
-    // Featured "See all" links
+    // "See all" links
     var seeAllLinks = document.querySelectorAll('.section-header a');
     if (seeAllLinks.length > 0) seeAllLinks[0].setAttribute('href', '/browse');
     if (seeAllLinks.length > 1) seeAllLinks[1].setAttribute('href', '/category');
     if (seeAllLinks.length > 2) seeAllLinks[2].setAttribute('href', '/browse');
 
-    // Topbar avatar click → profile
+    // Topbar avatar click -> profile
     document.querySelector('.avatar')?.addEventListener('click', function() { window.location.href = '/profile'; });
   }
 
@@ -1303,7 +1283,8 @@
     return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
-  initFirebase();
+  // Boot
+  initApp();
 </script>
 </body>
 </html>

@@ -937,7 +937,6 @@ table .cell-actions {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 30px;
-  max-width: 700px;
 }
 
 .form-group {

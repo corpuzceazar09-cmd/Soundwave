@@ -24,12 +24,14 @@
       <h2 class="login-card-title">Sign In</h2>
       <p class="login-card-subtitle">Access your high-density workspace</p>
 
-      <form action="/login" method="POST">
+      <form id="loginForm">
+        <div id="loginError" style="display:none;background:var(--error-bg);color:var(--error-text);padding:0.75rem 1rem;border-radius:6px;margin-bottom:1.25rem;font-size:0.875rem;font-weight:500;"></div>
+
         <div class="input-group">
-          <label class="input-label">Editor ID</label>
+          <label class="input-label">Email</label>
           <div class="input-wrapper">
-            <i class="fa-regular fa-id-badge input-icon"></i>
-            <input type="text" name="editorId" class="form-control" placeholder="ED-000-000" required>
+            <i class="fa-regular fa-envelope input-icon"></i>
+            <input type="email" id="email" class="form-control" placeholder="editor@soundwave.com" required>
           </div>
         </div>
 
@@ -40,16 +42,11 @@
           </label>
           <div class="input-wrapper">
             <i class="fa-solid fa-lock input-icon"></i>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            <input type="password" id="password" class="form-control" placeholder="••••••••" required>
           </div>
         </div>
 
-        <label class="checkbox-group">
-          <input type="checkbox">
-          Keep me authenticated for 12 hours
-        </label>
-
-        <button type="submit" class="btn-primary w-full" style="padding: 1rem; font-size: 1rem;">
+        <button type="submit" class="btn-primary w-full" style="padding: 1rem; font-size: 1rem;" id="loginBtn">
           Enter Editorial Suite
         </button>
       </form>
@@ -72,5 +69,55 @@
     
     <i class="fa-solid fa-book-open watermark-icon"></i>
   </div>
+
+  <script>
+    // Check if already logged in
+    if (localStorage.getItem('editor_token')) {
+      window.location.replace('/editorial-dashboard');
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Please enter your email and password.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Login failed');
+        }
+
+        // Store token and redirect
+        localStorage.setItem('editor_token', data.token);
+        localStorage.setItem('editor_email', data.editor.email);
+        localStorage.setItem('editor_role', data.editor.role);
+        window.location.replace('/editorial-dashboard');
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Enter Editorial Suite';
+      }
+    });
+  </script>
 </body>
 </html>

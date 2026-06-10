@@ -6,6 +6,7 @@
   <title>Episodes - Podcast Editor</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -20,14 +21,17 @@
         <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item active"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
         </div>
       </div>
     </aside>
@@ -62,7 +66,7 @@
         <div class="page-header">
           <div>
             <h2 class="page-title">Episode Management</h2>
-            <p class="page-subtitle">Managing 49 episodes across 4 categories</p>
+            <p class="page-subtitle">Loading episodes...</p>
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center">
             <button class="btn-secondary"><i class="fa-solid fa-sliders"></i> Advanced Filters</button>
@@ -113,90 +117,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td>
-                <div class="ep-row-info">
-                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
-                  <div>
-                    <div class="podcast-title">The Future of Generative AI</div>
-                    <div class="podcast-publisher">with Jason Lernow</div>
-                  </div>
-                </div>
-              </td>
-              <td>42:15</td>
-              <td>Oct 24, 2023</td>
-              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td>
-                <div class="ep-row-info">
-                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
-                  <div>
-                    <div class="podcast-title">Deep Dive: Data Residency</div>
-                    <div class="podcast-publisher">with Marcus Farm</div>
-                  </div>
-                </div>
-              </td>
-              <td>38:42</td>
-              <td>Oct 12, 2023</td>
-              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td>
-                <div class="ep-row-info">
-                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
-                  <div>
-                    <div class="podcast-title">Scaling Content Operations</div>
-                    <div class="podcast-publisher">MPI S. Keamy Liu</div>
-                  </div>
-                </div>
-              </td>
-              <td>54:30</td>
-              <td>Scheduled Oct 27</td>
-              <td><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label> Hidden</td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><input type="checkbox"></td>
-              <td>
-                <div class="ep-row-info">
-                  <button class="ep-play-btn"><i class="fa-solid fa-play"></i></button>
-                  <div>
-                    <div class="podcast-title">The Ethics of AI Narrative</div>
-                    <div class="podcast-publisher">MPI D. Keamy Liu</div>
-                  </div>
-                </div>
-              </td>
-              <td>28:48</td>
-              <td>Oct 18, 2023</td>
-              <td><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label> Published</td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </td>
-            </tr>
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading episodes...</td></tr>
           </tbody>
         </table>
 
@@ -215,6 +136,78 @@
   </div>
 <script>
 (function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/)||i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/);if(!m)return;var tot=parseInt(m[3]),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
+    <script>
+requireAuth();
+(function() {
+  const user = EDITOR_API.getUser();
+  if (user) {
+    document.getElementById('sidebarEmail').textContent = user.email;
+    document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+    document.getElementById('sidebarUser').style.display = 'block';
+  }
+})();
+</script>
+<script>
+(function() {
+  // ---- LOAD EPISODES ----
+  const tbody = document.querySelector('.data-table tbody');
+  const statEls = document.querySelectorAll('.ep-stat-val');
+  const pageSubtitle = document.querySelector('.page-subtitle');
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '\u2014';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  EDITOR_API.get('/api/episodes?page=1&limit=20')
+    .then(data => {
+      const items = data.items || [];
+      const stats = data.stats || {};
+
+      if (statEls[0]) statEls[0].textContent = stats.total || items.length || 0;
+      if (pageSubtitle) pageSubtitle.textContent = 'Managing ' + (stats.total || items.length || 0) + ' episodes';
+
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-gray)">No episodes found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = items.map(ep => {
+        const title = escapeHtml(ep.title || 'Untitled');
+        const podcastName = escapeHtml(ep.podcasts?.title || '\u2014');
+        const duration = ep.duration || '\u2014';
+        const pubDate = formatDate(ep.published_at || ep.created_at);
+        const status = ep.status || 'draft';
+        const isPub = status === 'published';
+        const statusLabel = isPub ? 'Published' : status.charAt(0).toUpperCase() + status.slice(1);
+        return '<tr>' +
+          '<td><input type="checkbox"></td>' +
+          '<td><div class="ep-row-info"><button class="ep-play-btn"><i class="fa-solid fa-play"></i></button><div><div class="podcast-title">' + title + '</div><div class="podcast-publisher">' + podcastName + '</div></div></div></td>' +
+          '<td>' + duration + '</td>' +
+          '<td>' + pubDate + '</td>' +
+          '<td><label class="toggle-switch"><input type="checkbox"' + (isPub ? ' checked' : '') + '><span class="toggle-slider"></span></label> ' + statusLabel + '</td>' +
+          '<td><div style="display:flex;gap:0.5rem"><button class="btn-icon" onclick="window.location=\'/rich-editor\'" title="Edit"><i class="fa-solid fa-pen"></i></button><button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button></div></td>' +
+          '</tr>';
+      }).join('');
+
+      const pageInfo = document.querySelector('.page-info');
+      if (pageInfo) {
+        const total = stats.total || items.length;
+        pageInfo.innerHTML = 'Showing 1\u2013' + items.length + ' of ' + total + ' episodes';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to load episodes:', err);
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load episodes</td></tr>';
+    });
+})();
 </script>
 </body>
 </html>

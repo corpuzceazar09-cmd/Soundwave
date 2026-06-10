@@ -19,10 +19,10 @@ const IS_WIDE = SCREEN_WIDTH >= 1024;
 const NAV_ITEMS = [
   { icon: 'home', label: 'Home', route: '/(user)' },
   { icon: 'compass-outline', label: 'Discover', route: '/(user)' },
-  { icon: 'library-outline', label: 'Library', route: '/(user)' },
-  { icon: 'layers-outline', label: 'Subscriptions', route: '/(user)' },
-  { icon: 'time-outline', label: 'History', route: '/(user)' },
-  { icon: 'settings-outline', label: 'Settings', route: '/(user)' },
+  { icon: 'library-outline', label: 'Library', route: '/(user)/library' },
+  { icon: 'layers-outline', label: 'Subscriptions', route: '/(user)/subscriptions' },
+  { icon: 'time-outline', label: 'History', route: '/(user)/history' },
+  { icon: 'settings-outline', label: 'Settings', route: '/(user)/settings' },
 ];
 
 export default function UserLayout() {

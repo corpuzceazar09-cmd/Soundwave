@@ -546,6 +546,37 @@ app.put('/api/editor/episodes/:id/status', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/editor/podcasts - list all podcasts with episode counts
+app.get('/api/editor/podcasts', authMiddleware, async (req, res) => {
+  try {
+    const { search, limit = 50, offset = 0 } = req.query;
+
+    let query = supabase
+      .from('podcasts')
+      .select('*, episode_count:episodes(count)', { count: 'exact' });
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    const { data, count, error } = await query
+      .order('created_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+    if (error) throw error;
+
+    const items = (data || []).map(p => ({
+      ...p,
+      episode_count: p.episode_count?.[0]?.count || 0,
+    }));
+
+    res.json({ items, total: count || items.length });
+  } catch (err) {
+    console.error('[PODCASTS LIST ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/editor/podcasts/:id
 app.put('/api/editor/podcasts/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -764,6 +795,7 @@ const cleanUrlMap = {
   '/rich-editor': '/rich-editor.html',
   '/collections': '/collections.html',
   '/episodes': '/episodes.html',
+  '/podcasts': '/podcasts.html',
   '/content-browser': '/content-browser.html',
   '/admin-settings': '/admin-settings.html',
 };

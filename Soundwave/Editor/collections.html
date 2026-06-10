@@ -6,6 +6,7 @@
   <title>Collections Manager - Podcast Editor</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -20,14 +21,17 @@
         <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item active"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Help Center</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>System Status</a>
+          <a href="#" class="bottom-link" id="signOutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Sign Out
+          </a>
         </div>
       </div>
     </aside>
@@ -68,125 +72,22 @@
           <div class="cstat">
             <div class="cstat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-layer-group"></i></div>
             <div>
-              <div class="cstat-val">42</div>
-              <div class="cstat-label">TOTAL COLLECTIONS <span class="change-blue">↑ 3 this month</span></div>
+              <div class="cstat-val">0</div>
+              <div class="cstat-label">TOTAL COLLECTIONS</div>
             </div>
           </div>
           <div class="cstat">
             <div class="cstat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div>
             <div>
-              <div class="cstat-val">1,284</div>
-              <div class="cstat-label">ACTIVE PODCASTS <span style="color:var(--text-gray)">Across all collections</span></div>
-            </div>
-          </div>
-          <div class="cstat">
-            <div class="cstat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-chart-bar"></i></div>
-            <div>
-              <div class="cstat-val">4.2/day</div>
-              <div class="cstat-label">CONTENT VELOCITY <span style="color:var(--text-gray)">Avg update frequency</span></div>
+              <div class="cstat-val">0</div>
+              <div class="cstat-label">TOTAL PODCASTS</div>
             </div>
           </div>
         </div>
 
         <!-- Collection Grid -->
         <div class="collections-grid">
-          <div class="collection-card" onclick="alert('Collection: Best of 2023')">
-            <div class="cc-thumb">
-              <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop" alt="Best of 2023">
-              <span class="cc-badge">EPIC</span>
-            </div>
-            <div class="cc-body">
-              <div class="cc-header">
-                <span class="cc-title">Best of 2023</span>
-                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-              </div>
-              <p class="cc-desc">A strong collection to respect top of the most impactful you've said right...</p>
-              <div class="cc-footer">
-                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 108 Podcasts</span>
-                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated 19 ago</span>
-              </div>
-              <div class="cc-actions">
-                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
-                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
-                <a href="#" class="cc-manage">Manage →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="collection-card" onclick="alert('Collection: Tech Deep Dives')">
-            <div class="cc-thumb">
-              <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&h=150&fit=crop" alt="Tech Deep Dives">
-            </div>
-            <div class="cc-body">
-              <div class="cc-header">
-                <span class="cc-title">Tech Deep Dives</span>
-                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-              </div>
-              <p class="cc-desc">Exploration of emerging technologies, AI, development, and cybersecurity insights...</p>
-              <div class="cc-footer">
-                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 56 Podcasts</span>
-                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated Dec 12</span>
-              </div>
-              <div class="cc-actions">
-                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
-                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
-                <a href="#" class="cc-manage">Manage →</a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Create New Card -->
-          <div class="collection-card collection-card-new" onclick="alert('Create new collection')">
-            <div class="cc-new-content">
-              <div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div>
-              <div class="cc-new-title">Create New Collection</div>
-              <div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div>
-            </div>
-          </div>
-
-          <div class="collection-card" onclick="alert('Collection: Business Strategy')">
-            <div class="cc-thumb">
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=150&fit=crop" alt="Business Strategy">
-            </div>
-            <div class="cc-body">
-              <div class="cc-header">
-                <span class="cc-title">Business Strategy</span>
-                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-              </div>
-              <p class="cc-desc">High-impact business strategy, market analysis, operational excellence framework...</p>
-              <div class="cc-footer">
-                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 214 Podcasts</span>
-                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated Yesterday</span>
-              </div>
-              <div class="cc-actions">
-                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
-                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
-                <a href="#" class="cc-manage">Manage →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="collection-card" onclick="alert('Collection: Daily Briefing')">
-            <div class="cc-thumb">
-              <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=300&h=150&fit=crop" alt="Daily Briefing">
-            </div>
-            <div class="cc-body">
-              <div class="cc-header">
-                <span class="cc-title">Daily Briefing</span>
-                <button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-              </div>
-              <p class="cc-desc">Consolidated short-form news, updates and essential morning briefings...</p>
-              <div class="cc-footer">
-                <span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> 96 Podcasts</span>
-                <span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated 5hrs ago</span>
-              </div>
-              <div class="cc-actions">
-                <button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button>
-                <button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button>
-                <a href="#" class="cc-manage">Manage →</a>
-              </div>
-            </div>
-          </div>
+          <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading collections...</div>
         </div>
 
         <div class="pagination" style="margin-top:1.5rem">
@@ -206,6 +107,75 @@
   </div>
 <script>
 (function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/);if(!m)return;var tot=parseInt(m[3]),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+</script>
+  <script>
+requireAuth();
+(function() {
+  const user = EDITOR_API.getUser();
+  if (user) {
+    document.getElementById('sidebarEmail').textContent = user.email;
+    document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+    document.getElementById('sidebarUser').style.display = 'block';
+  }
+})();
+</script>
+<script>
+(function() {
+  // ---- LOAD COLLECTIONS ----
+  const grid = document.querySelector('.collections-grid');
+  const statVals = document.querySelectorAll('.cstat-val');
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function timeAgo(dateStr) {
+    if (!dateStr) return '\u2014';
+    const now = new Date();
+    const d = new Date(dateStr);
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function createCard(col) {
+    const name = escapeHtml(col.title || col.name || 'Untitled');
+    const desc = escapeHtml(col.description || '') || 'No description';
+    const pc = col.podcast_count || 0;
+    const updated = timeAgo(col.updated_at || col.created_at);
+    const img = 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop';
+    return '<div class="collection-card"><div class="cc-thumb"><img src="' + img + '" alt="' + name + '"></div><div class="cc-body"><div class="cc-header"><span class="cc-title">' + name + '</span><button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button></div><p class="cc-desc">' + desc.substring(0, 80) + (desc.length > 80 ? '...' : '') + '</p><div class="cc-footer"><span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> ' + pc + ' Podcasts</span><span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated ' + updated + '</span></div><div class="cc-actions"><button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button><button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button><a href="#" class="cc-manage">Manage \u2192</a></div></div></div>';
+  }
+
+  EDITOR_API.get('/api/collections')
+    .then(data => {
+      const items = data.items || data || [];
+      const stats = data.stats || {};
+
+      if (statVals[0]) statVals[0].textContent = stats.total || items.length || 0;
+      const totalPodcasts = items.reduce((sum, c) => sum + (c.podcast_count || 0), 0);
+      if (statVals[1]) statVals[1].textContent = totalPodcasts || stats.totalEpisodes || 0;
+
+      const cardsHtml = items.map(createCard).join('');
+      const newCard = '<div class="collection-card collection-card-new" onclick="alert(\'Create new collection\')"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
+      grid.innerHTML = cardsHtml + newCard;
+
+      const pageInfo = document.querySelector('.page-info');
+      if (pageInfo) {
+        const total = stats.total || items.length;
+        pageInfo.innerHTML = 'Showing 1\u2013' + items.length + ' of ' + total + ' collections';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to load collections:', err);
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--error-text)">Failed to load collections</div>' +
+        '<div class="collection-card collection-card-new" onclick="alert(\'Create new collection\')"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
+    });
+})();
 </script>
 </body>
 </html>

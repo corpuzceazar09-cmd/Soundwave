@@ -6,6 +6,7 @@
   <title>Editorial Dashboard - Podcast Editor</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -21,14 +22,18 @@
         <a href="/rich-editor" class="nav-item"><i class="fa-solid fa-pen-nib"></i>Rich Editor</a>
         <a href="/collections" class="nav-item"><i class="fa-solid fa-layer-group"></i>Collections</a>
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
+        <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
         <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
       </nav>
       <div class="sidebar-bottom">
+        <div class="sidebar-user" id="sidebarUser" style="display:none;padding:0.75rem 1.5rem;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:0.75rem;font-size:0.75rem;color:rgba(203,213,225,0.7);">
+          <div id="sidebarEmail" style="font-weight:600;color:white;font-size:0.8125rem;"></div>
+          <div id="sidebarRole" style="text-transform:uppercase;letter-spacing:0.05em;"></div>
+        </div>
         <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New</button>
         <div class="sidebar-bottom-links">
-          <a href="#" class="bottom-link"><i class="fa-regular fa-circle-question"></i>Settings</a>
-          <a href="#" class="bottom-link"><i class="fa-solid fa-chart-line"></i>Help Center</a>
+          <a href="#" class="bottom-link" id="signOutBtn"><i class="fa-solid fa-right-from-bracket"></i>Sign Out</a>
         </div>
       </div>
     </aside>
@@ -62,31 +67,31 @@
           </div>
         </div>
 
-        <!-- Metric Cards -->
+        <!-- Metric Cards (populated from API) -->
         <div class="dash-metrics">
           <div class="metric-card metric-blue">
             <div class="metric-top">
               <span class="metric-label">PENDING REVIEWS</span>
               <i class="fa-solid fa-list-check metric-icon"></i>
             </div>
-            <div class="metric-value">42</div>
-            <div class="metric-sub change-red">+8 vs last week</div>
+            <div class="metric-value" id="metricPendingReviews">—</div>
+            <div class="metric-sub change-gray">Awaiting editorial review</div>
           </div>
           <div class="metric-card metric-teal">
             <div class="metric-top">
               <span class="metric-label">DRAFTS IN PROGRESS</span>
               <i class="fa-solid fa-pen metric-icon"></i>
             </div>
-            <div class="metric-value">128</div>
-            <div class="metric-sub change-blue">+14% vs last week</div>
+            <div class="metric-value" id="metricDrafts">—</div>
+            <div class="metric-sub change-gray">Episodes not yet published</div>
           </div>
           <div class="metric-card metric-indigo">
             <div class="metric-top">
               <span class="metric-label">PUBLISHED THIS YEAR</span>
               <i class="fa-solid fa-globe metric-icon"></i>
             </div>
-            <div class="metric-value">1,402</div>
-            <div class="metric-sub change-blue">+128 Deploy discrepancy</div>
+            <div class="metric-value" id="metricPublished">—</div>
+            <div class="metric-sub change-gray">Episodes published in 2026</div>
           </div>
         </div>
 
@@ -108,27 +113,8 @@
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>
-                    <div class="podcast-title">The Future of AI Audits</div>
-                    <div class="podcast-publisher">Machine Episode #4</div>
-                  </td>
-                  <td>James Weser</td>
-                  <td><span class="badge badge-red"><span class="badge-dot"></span>LATEST</span></td>
-                  <td><button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button></td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>
-                    <div class="podcast-title">Navigating Remote Work</div>
-                    <div class="podcast-publisher">WorkLife Series</div>
-                  </td>
-                  <td>Sarah Chan</td>
-                  <td><span class="badge badge-yellow"><span class="badge-dot"></span>MEDIUM</span></td>
-                  <td><button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button></td>
-                </tr>
+              <tbody id="reviewPrioritiesBody">
+                <tr><td colspan="5" style="text-align:center;color:var(--text-gray);padding:2rem;">Loading...</td></tr>
               </tbody>
             </table>
           </div>
@@ -139,28 +125,8 @@
               <span class="dash-panel-title">Recent Activity</span>
               <a href="#" class="dash-panel-link">Show More Activity →</a>
             </div>
-            <div class="activity-list">
-              <div class="activity-item">
-                <div class="activity-dot dot-blue"></div>
-                <div class="activity-body">
-                  <div class="activity-text">System approved <strong>"Spotify R..."</strong></div>
-                  <div class="activity-time">15:21 Today</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-dot dot-orange"></div>
-                <div class="activity-body">
-                  <div class="activity-text">Sam Chen AI adjustment — <em>"Verify also u approved, a..</em></div>
-                  <div class="activity-time">14:42 Today</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-dot dot-green"></div>
-                <div class="activity-body">
-                  <div class="activity-text">BM flagged error in <strong>"Finance"</strong></div>
-                  <div class="activity-time">12:05 Today</div>
-                </div>
-              </div>
+            <div class="activity-list" id="recentActivity">
+              <div style="text-align:center;color:var(--text-gray);padding:1.5rem;">Loading...</div>
             </div>
           </div>
         </div>
@@ -171,25 +137,8 @@
             <span class="dash-panel-title">Top Performing Episodes</span>
             <span class="dash-panel-sub">Last 14 Days</span>
           </div>
-          <div class="top-episodes">
-            <div class="top-ep-card" onclick="window.location='/rich-editor'" style="cursor:pointer">
-              <div class="top-ep-thumb" style="background:linear-gradient(135deg,#1e293b,#0f172a)">
-                <i class="fa-solid fa-robot" style="color:#38bdf8;font-size:1.5rem"></i>
-              </div>
-              <div class="top-ep-body">
-                <div class="top-ep-title">AI Revolution Pt 1</div>
-                <div class="top-ep-meta">91.2k views · +742 Issues</div>
-              </div>
-            </div>
-            <div class="top-ep-card" onclick="window.location='/rich-editor'" style="cursor:pointer">
-              <div class="top-ep-thumb" style="background:linear-gradient(135deg,#312e81,#1e1b4b)">
-                <i class="fa-solid fa-building" style="color:#a5b4fc;font-size:1.5rem"></i>
-              </div>
-              <div class="top-ep-body">
-                <div class="top-ep-title">Mindset of Builders</div>
-                <div class="top-ep-meta">39.8k views · +621 Issues</div>
-              </div>
-            </div>
+          <div class="top-episodes" id="topEpisodes">
+            <div style="text-align:center;color:var(--text-gray);padding:1.5rem;width:100%;">Loading...</div>
           </div>
         </div>
       </div>
@@ -197,6 +146,17 @@
   </div>
 
   <script>
+    // Show sidebar user
+    (function() {
+      const email = localStorage.getItem('editor_email');
+      const role = localStorage.getItem('editor_role');
+      if (email) {
+        document.getElementById('sidebarEmail').textContent = email;
+        document.getElementById('sidebarRole').textContent = role || 'Editor';
+        document.getElementById('sidebarUser').style.display = 'block';
+      }
+    })();
+
     // Nav active state
     document.querySelectorAll('.nav-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -204,6 +164,85 @@
         el.classList.add('active');
       });
     });
+
+    // Load dashboard data
+    async function loadDashboard() {
+      try {
+        const stats = await EDITOR_API.get('/api/stats');
+        if (stats) {
+          document.getElementById('metricPendingReviews').textContent = stats.pendingReviews ?? 0;
+          document.getElementById('metricDrafts').textContent = stats.draftEpisodes ?? 0;
+          document.getElementById('metricPublished').textContent = stats.publishedThisYear ?? 0;
+        }
+      } catch (e) { console.error('Stats load error:', e); }
+
+      try {
+        const queue = await EDITOR_API.get('/api/review-queue?status=pending');
+        const tbody = document.getElementById('reviewPrioritiesBody');
+        if (queue && queue.items && queue.items.length > 0) {
+          tbody.innerHTML = queue.items.slice(0, 5).map((item, i) => {
+            const ep = item.episode_id || {};
+            const pod = ep.podcast_id || {};
+            return `<tr>
+              <td>${i + 1}</td>
+              <td>
+                <div class="podcast-title">${item.title || ep.title || 'Untitled'}</div>
+                <div class="podcast-publisher">${pod.title || ''}</div>
+              </td>
+              <td>${pod.author || '—'}</td>
+              <td><span class="badge badge-yellow"><span class="badge-dot"></span>PENDING</span></td>
+              <td><button class="btn-icon" onclick="EDITOR_API.put('/api/review-queue/${item.id}',{status:'accepted'}).then(()=>location.reload())"><i class="fa-solid fa-check"></i></button></td>
+            </tr>`;
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-gray);padding:2rem;">No pending reviews.</td></tr>';
+        }
+      } catch (e) { console.error('Review queue load error:', e); }
+
+      try {
+        const episodesData = await EDITOR_API.get('/api/episodes?limit=5');
+        const container = document.getElementById('topEpisodes');
+        if (episodesData && episodesData.items && episodesData.items.length > 0) {
+          container.innerHTML = episodesData.items.slice(0, 4).map(ep => {
+            const pod = ep.podcast_id || {};
+            return `<div class="top-ep-card" style="cursor:pointer">
+              <div class="top-ep-thumb" style="background:linear-gradient(135deg,#1e293b,#0f172a);display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-podcast" style="color:#38bdf8;font-size:1.25rem"></i>
+              </div>
+              <div class="top-ep-body">
+                <div class="top-ep-title">${ep.title || 'Untitled'}</div>
+                <div class="top-ep-meta">${pod.title || ''} · ${ep.status}</div>
+              </div>
+            </div>`;
+          }).join('');
+        } else {
+          container.innerHTML = '<div style="text-align:center;color:var(--text-gray);padding:1.5rem;width:100%;">No episodes yet.</div>';
+        }
+      } catch (e) { console.error('Top episodes load error:', e); }
+
+      try {
+        const activity = await EDITOR_API.get('/api/review-queue?status=accepted');
+        const container = document.getElementById('recentActivity');
+        if (activity && activity.items && activity.items.length > 0) {
+          container.innerHTML = activity.items.slice(0, 5).map(item => {
+            const ep = item.episode_id || {};
+            const time = item.updated_at || item.created_at || '';
+            const date = time ? new Date(time).toLocaleString() : '';
+            return `<div class="activity-item">
+              <div class="activity-dot dot-green"></div>
+              <div class="activity-body">
+                <div class="activity-text">Review approved: <strong>"${item.title || ep.title || 'Untitled'}"</strong></div>
+                <div class="activity-time">${date}</div>
+              </div>
+            </div>`;
+          }).join('');
+        } else {
+          container.innerHTML = '<div style="text-align:center;color:var(--text-gray);padding:1.5rem;">No recent activity.</div>';
+        }
+      } catch (e) { console.error('Activity load error:', e); }
+    }
+
+    loadDashboard();
   </script>
 </body>
 </html>

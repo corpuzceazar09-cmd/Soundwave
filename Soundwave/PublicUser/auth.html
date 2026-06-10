@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SoundWave - Sign In</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Firebase SDK (compat — no bundler needed) -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -511,50 +507,7 @@
   </div>
 
   <script>
-    // ── Firebase Init ──
-    let auth = null;
-    let db = null;
-    let firebaseReady = false;
-
-    async function initFirebase() {
-      try {
-        const resp = await fetch('/api/config');
-        if (!resp.ok) throw new Error('Config endpoint returned ' + resp.status);
-        const config = await resp.json();
-        firebase.initializeApp(config);
-        auth = firebase.auth();
-        db = firebase.firestore();
-
-        db.enablePersistence().catch(function(){});
-
-        firebaseReady = true;
-        console.log('[Firebase] Initialized');
-
-        // Auth state listener — NEVER auto-redirect here.
-        // Only redirect after explicit Sign In button click (handleLogin).
-        auth.onAuthStateChanged(function(user) {
-          if (user) {
-            console.log('[Auth] User is signed in (waiting for manual redirect)');
-          }
-          // Always hide loader and show the auth form
-          setLoading(false);
-        });
-      } catch (err) {
-        console.error('[Firebase] Init failed:', err);
-        document.getElementById('loadingText').textContent = 'Could not connect to SoundWave. Check your connection.';
-        document.getElementById('loadingOverlay').innerHTML =
-          '<div style="text-align:center;padding:24px;">' +
-            '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.5" style="margin:0 auto 16px;display:block;">' +
-              '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>' +
-            '</svg>' +
-            '<p style="color:#FCA5A5;font-size:14px;font-weight:600;margin-bottom:8px;">Connection Failed</p>' +
-            '<p style="color:#94A3B8;font-size:13px;margin-bottom:20px;">Unable to reach SoundWave servers. Please try again.</p>' +
-            '<button onclick="location.reload()" style="padding:10px 24px;border-radius:10px;border:none;background:#38BDF8;color:#0F172A;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Retry</button>' +
-          '</div>';
-      }
-    }
-
-    // ── UI Helpers ──
+    // ── Helpers ──
 
     function setLoading(active) {
       document.getElementById('loadingOverlay').classList.toggle('active', active);
@@ -585,33 +538,22 @@
       m.className = 'message ' + (type === 'error' ? 'error' : 'success');
     }
 
-    function getFirebaseError(err) {
-      var code = err.code || '';
-      var msg = err.message || '';
-      // Incorrect credentials
-      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-        return 'Incorrect email or password. Please check your credentials and try again.';
-      }
-      if (code === 'auth/invalid-email') {
-        return 'That email address is not valid. Please enter a correct email.';
-      }
-      if (code === 'auth/email-already-in-use') {
+    function getErrorMessage(err) {
+      if (!err) return 'Something went wrong. Please try again.';
+      var msg = err.error || err.message || '';
+      if (msg.includes('already registered') || msg.includes('already in use')) {
         return 'This email is already registered. Try signing in instead.';
       }
-      if (code === 'auth/weak-password') {
-        return 'Password too weak — must be at least 6 characters.';
+      if (msg.includes('weak') || msg.includes('6 characters')) {
+        return 'Password must be at least 6 characters.';
       }
-      if (code === 'auth/too-many-requests') {
-        return 'Too many failed attempts. Please wait a moment before trying again.';
+      if (msg.includes('Invalid email') || msg.includes('Invalid login')) {
+        return 'Invalid email or password. Please check your credentials.';
       }
-      if (code === 'auth/network-request-failed') {
-        return 'Network error — please check your internet connection.';
+      if (msg.includes('rate limit') || msg.includes('too many')) {
+        return 'Too many attempts. Please wait a moment before trying again.';
       }
-      if (code === 'auth/user-disabled') {
-        return 'This account has been disabled. Contact support.';
-      }
-      // Fallback: show a clean message instead of raw Firebase error
-      return 'Something went wrong. Please try again.';
+      return msg || 'Something went wrong. Please try again.';
     }
 
     // ── Validation ──
@@ -634,7 +576,7 @@
       return null;
     }
 
-    // ── Auth Actions ──
+    // ── Auth API calls ──
 
     async function handleLogin() {
       var email = document.getElementById('login-email').value.trim();
@@ -649,10 +591,28 @@
       showMsg('', '');
 
       try {
-        await auth.signInWithEmailAndPassword(email, password);
+        var res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        var data = await res.json();
+
+        if (!res.ok) {
+          showMsg(getErrorMessage(data), 'error');
+          btn.disabled = false;
+          setLoading(false);
+          return;
+        }
+
+        // Store auth data
+        localStorage.setItem('pu_token', data.token);
+        localStorage.setItem('pu_user', JSON.stringify(data.user));
+
         window.location.href = '/home';
       } catch (err) {
-        showMsg(getFirebaseError(err), 'error');
+        showMsg('Network error — please check your internet connection.', 'error');
         btn.disabled = false;
         setLoading(false);
       }
@@ -673,25 +633,29 @@
       showMsg('', '');
 
       try {
-        var cred = await auth.createUserWithEmailAndPassword(email, password);
-        await cred.user.updateProfile({ displayName: name });
-        await db.collection('users').doc(cred.user.uid).set({
-          name: name,
-          email: email,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          avatar: null
+        var res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password }),
         });
 
-        // Sign out so they must log in manually
-        await auth.signOut();
+        var data = await res.json();
 
-        // Reset form & show success message
+        if (!res.ok) {
+          showMsg(getErrorMessage(data), 'error');
+          btn.disabled = false;
+          setLoading(false);
+          return;
+        }
+
+        // Signup successful — switch to login tab so user can sign in
+        showMsg(data.message || 'Account created successfully!', 'success');
         btn.disabled = false;
         setLoading(false);
         switchMode('login');
-        showMsg('Account created! Please sign in to continue.', 'success');
+        return;
       } catch (err) {
-        showMsg(getFirebaseError(err), 'error');
+        showMsg('Network error — please check your internet connection.', 'error');
         btn.disabled = false;
         setLoading(false);
       }
@@ -706,8 +670,8 @@
       }
     });
 
-    // ── Boot ──
-    initFirebase();
+    // ── Boot — hide loading ──
+    setLoading(false);
   </script>
 </body>
 </html>
