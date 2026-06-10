@@ -43,7 +43,13 @@ export default function PodcastDetailScreen() {
   const [duration, setDuration] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
   const positionRef = useRef(0);
+  const currentEpisodeRef = useRef<Episode | null>(null);
   const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync currentEpisode ref to avoid stale closure in interval
+  useEffect(() => {
+    currentEpisodeRef.current = currentEpisode;
+  }, [currentEpisode]);
 
   useEffect(() => {
     loadPodcast();
@@ -107,8 +113,9 @@ export default function PodcastDetailScreen() {
 
       if (saveIntervalRef.current) clearInterval(saveIntervalRef.current);
       saveIntervalRef.current = setInterval(() => {
-        if (user && currentEpisode) {
-          savePlayProgress(user.uid, currentEpisode.id, id, positionRef.current, duration);
+        const ep = currentEpisodeRef.current;
+        if (user && ep) {
+          savePlayProgress(user.uid, ep.id, id, positionRef.current, duration);
         }
       }, 30000);
     } catch (err) {
