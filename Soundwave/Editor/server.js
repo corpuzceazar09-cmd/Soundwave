@@ -73,6 +73,22 @@ const loginLimiter = rateLimit({
 });
 
 app.use(cors({ origin: 'http://localhost:8081', credentials: true }));
+
+// CSRF protection — origin header check for state-changing requests
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    if (origin && !origin.startsWith('http://localhost:8081')) {
+      return res.status(403).json({ error: 'CSRF validation failed' });
+    }
+    if (!origin && referer && !referer.startsWith('http://localhost:8081')) {
+      return res.status(403).json({ error: 'CSRF validation failed' });
+    }
+  }
+  next();
+});
+
 app.use(express.json());
 
 // ---------------------------------------------------------------------------

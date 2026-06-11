@@ -53,6 +53,24 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3002',
   credentials: true,
 }));
+
+// CSRF protection — origin header check for state-changing requests
+// Browsers always send Origin on cross-origin requests; we verify it matches
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3002';
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    if (origin && !origin.startsWith(ALLOWED_ORIGIN)) {
+      return res.status(403).json({ error: 'CSRF validation failed' });
+    }
+    if (!origin && referer && !referer.startsWith(ALLOWED_ORIGIN)) {
+      return res.status(403).json({ error: 'CSRF validation failed' });
+    }
+  }
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname)));
 
