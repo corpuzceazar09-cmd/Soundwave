@@ -606,11 +606,11 @@
           return;
         }
 
-        // Store auth data
+        // Store auth data (use replace so Back on home doesn't return to auth page)
         localStorage.setItem('pu_token', data.token);
         localStorage.setItem('pu_user', JSON.stringify(data.user));
 
-        window.location.href = '/home';
+        window.location.replace('/home');
       } catch (err) {
         showMsg('Network error — please check your internet connection.', 'error');
         btn.disabled = false;
@@ -670,8 +670,14 @@
       }
     });
 
-    // ── Boot — hide loading ──
-    setLoading(false);
+    // ── Boot — hide loading, check if already logged in ──
+    if (localStorage.getItem('pu_token')) {
+      window.location.replace('/home');
+    } else {
+      // Replace history so protected pages can't be re-entered via forward-button
+      history.replaceState(null, '', window.location.href);
+      setLoading(false);
+    }
   </script>
 </body>
 </html>

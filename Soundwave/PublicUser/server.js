@@ -82,6 +82,7 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https://ui-avatars.com', 'https://image.simplecastcdn.com', 'https://*.supabase.co'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      mediaSrc: ["'self'", 'https:', 'http:', 'blob:'],
       connectSrc: ["'self'", `https://${supabaseUrl.replace('https://', '')}`],
     },
   },

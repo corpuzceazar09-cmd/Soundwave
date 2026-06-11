@@ -18,6 +18,7 @@ const EDITOR_API = {
 
   requireAuth() {
     if (!this.isAuthenticated()) {
+      // Use replace() so the protected page is removed from browser history
       window.location.replace('/login');
       return false;
     }
@@ -28,6 +29,7 @@ const EDITOR_API = {
     localStorage.removeItem('editor_token');
     localStorage.removeItem('editor_email');
     localStorage.removeItem('editor_role');
+    // Replace so pressing Back on the login page won't return to the protected page
     window.location.replace('/login');
   },
 
@@ -80,11 +82,18 @@ const EDITOR_API = {
 
 // Auto-run auth check on page load
 document.addEventListener('DOMContentLoaded', () => {
+  const path = window.location.pathname;
+
   // Skip for login page
-  if (window.location.pathname === '/login' || window.location.pathname === '/login.html' || window.location.pathname === '/') {
+  if (path === '/login' || path === '/login.html' || path === '/') {
     return;
   }
-  EDITOR_API.requireAuth();
+
+  // Block if not authenticated (redirect to login, remove page from history)
+  if (!EDITOR_API.requireAuth()) return;
+
+  // Replace current history entry so Back button after logout goes to login, not this page
+  history.replaceState(null, '', window.location.href);
 
   // Bind Sign Out button (if present) — avoids inline onclick CSP issues
   const signOutBtn = document.getElementById('signOutBtn');

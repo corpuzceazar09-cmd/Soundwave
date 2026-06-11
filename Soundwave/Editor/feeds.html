@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feeds - Podcast Editor Suite</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="auth.js"></script>
+  <style>
+    .feeds-layout { display: flex; min-height: 100vh; }
+    .feeds-content { flex: 1; padding: 2rem; overflow-y: auto; }
+    .feeds-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .feeds-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+    .feeds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+    .feed-card {
+      background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border);
+      padding: 1.25rem; transition: box-shadow 0.2s;
+    }
+    .feed-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .feed-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+    .feed-card-title { font-size: 1rem; font-weight: 600; margin: 0; word-break: break-word; }
+    .feed-card-url { font-size: 0.8rem; color: var(--text-secondary); margin: 0.25rem 0 0.75rem; word-break: break-all; }
+    .feed-card-meta { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; flex-wrap: wrap; }
+    .feed-card-meta span { display: flex; align-items: center; gap: 0.35rem; }
+    .feed-card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .feed-card-actions .btn { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
+    .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .badge-active { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-pending { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .badge-failed { background: rgba(239,68,68,0.15); color: #f87171; }
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.75rem 1.25rem;
+      border-radius: 8px; font-size: 0.875rem; font-weight: 500;
+      transform: translateY(120%); transition: transform 0.3s ease; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); }
+    .toast-success { background: rgba(34,197,94,0.9); color: #fff; }
+    .toast-error { background: rgba(239,68,68,0.9); color: #fff; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state p { font-size: 1rem; }
+    @media (max-width: 768px) {
+      .feeds-content { padding: 1rem; }
+      .feeds-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="feeds-layout">
+    <div class="feeds-content">
+      <div class="feeds-header">
+        <h1><i class="fa-solid fa-rss" style="color:var(--accent);"></i> RSS Feeds</h1>
+        <a href="/podcasts" class="btn btn-primary"><i class="fa-solid fa-headphones"></i> View Podcasts</a>
+      </div>
+      <div id="feedsContainer">
+        <div class="empty-state">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>Loading feeds...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const token = localStorage.getItem('editor_token');
+      if (!token) { window.location.replace('/login'); return; }
+
+      const container = document.getElementById('feedsContainer');
+
+      async function loadFeeds() {
+        try {
+          const res = await fetch('/api/feeds', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const feeds = await res.json();
+          renderFeeds(feeds);
+        } catch (err) {
+          container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-exclamation-triangle"></i><p>Failed to load feeds: ' + err.message + '</p></div>';
+        }
+      }
+
+      function renderFeeds(feeds) {
+        if (!feeds.length) {
+          container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-rss"></i><p>No RSS feeds yet. Ask the Admin to add feeds from the Admin Portal.</p></div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="feeds-grid">' + feeds.map(f => {
+          const statusClass = 'badge-' + f.status;
+          return '<div class="feed-card">' +
+            '<div class="feed-card-header">' +
+              '<div>' +
+                '<h3 class="feed-card-title">' + escapeHtml(f.name) + '</h3>' +
+                '<p class="feed-card-url">' + escapeHtml(f.url) + '</p>' +
+              '</div>' +
+              '<span class="badge ' + statusClass + '">' + f.status + '</span>' +
+            '</div>' +
+            '<div class="feed-card-meta">' +
+              '<span><i class="fa-solid fa-tag"></i> ' + escapeHtml(f.category) + '</span>' +
+              '<span><i class="fa-solid fa-microphone"></i> ' + f.episodes + ' episodes</span>' +
+              (f.last_fetched ? '<span><i class="fa-solid fa-clock"></i> ' + new Date(f.last_fetched).toLocaleDateString() + '</span>' : '') +
+            '</div>' +
+            '<div class="feed-card-actions">' +
+              '<button class="btn btn-sm btn-primary ingest-btn" data-id="' + f.id + '" data-name="' + escapeHtml(f.name) + '"><i class="fa-solid fa-cloud-download-alt"></i> Ingest</button>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+
+        document.querySelectorAll('.ingest-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            this.disabled = true;
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingesting...';
+            try {
+              const res = await fetch('/api/feeds/' + id + '/ingest', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+              });
+              const data = await res.json();
+              if (res.ok) {
+                showToast(data.message, 'success');
+                loadFeeds();
+              } else {
+                showToast(data.error || 'Ingestion failed', 'error');
+                this.disabled = false;
+                this.innerHTML = '<i class="fa-solid fa-cloud-download-alt"></i> Ingest';
+              }
+            } catch (err) {
+              showToast('Network error: ' + err.message, 'error');
+              this.disabled = false;
+              this.innerHTML = '<i class="fa-solid fa-cloud-download-alt"></i> Ingest';
+            }
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function showToast(message, type) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type + ' show';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+      }
+
+      loadFeeds();
+    })();
+  </script>
+</body>
+</html>

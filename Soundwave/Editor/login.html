@@ -71,9 +71,12 @@
   </div>
 
   <script>
-    // Check if already logged in
+    // Check if already logged in — redirect away using replace() to remove this page from history
     if (localStorage.getItem('editor_token')) {
       window.location.replace('/editorial-dashboard');
+    } else {
+      // Prevent back-button from navigating forward to protected pages
+      history.replaceState(null, '', window.location.href);
     }
 
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -106,7 +109,7 @@
           throw new Error(data.error || 'Login failed');
         }
 
-        // Store token and redirect
+        // Store token and redirect (use replace so Back on dashboard doesn't go back to login)
         localStorage.setItem('editor_token', data.token);
         localStorage.setItem('editor_email', data.editor.email);
         localStorage.setItem('editor_role', data.editor.role);

@@ -21,6 +21,7 @@ const PUBLIC_API = {
 
   requireAuth() {
     if (!this.isAuthenticated()) {
+      // Use replace() so the protected page is removed from browser history
       window.location.replace('/auth');
       return false;
     }
@@ -30,6 +31,7 @@ const PUBLIC_API = {
   logout() {
     localStorage.removeItem('pu_token');
     localStorage.removeItem('pu_user');
+    // Replace so pressing Back on the auth page won't return to the protected page
     window.location.replace('/auth');
   },
 
@@ -81,9 +83,16 @@ const PUBLIC_API = {
 // Auto-run auth check on page load — redirect to auth if not logged in
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname;
+
   // Skip for auth pages and root
   if (path === '/auth' || path === '/auth.html' || path === '/') {
     return;
   }
-  PUBLIC_API.requireAuth();
+
+  // Block if not authenticated (redirect to auth, remove page from history)
+  if (!PUBLIC_API.requireAuth()) return;
+
+  // Replace current history entry so Back button after logout goes to auth, not this page
+  history.replaceState(null, '', window.location.href);
 });
+

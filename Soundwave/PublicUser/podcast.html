@@ -6,6 +6,7 @@
   <title>SoundWave - Podcast</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="auth.js"></script>
+  <script src="player.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --sidebar: 240px; --player-h: 80px; --topbar-h: 64px; }
@@ -78,17 +79,43 @@
     .episode-play { width: 34px; height: 34px; border-radius: 50%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
     .episode-play:hover { background: #CBD5E1; }
     /* Player bar */
-    .player-bar { position: fixed; bottom: 0; left: var(--sidebar); right: 0; height: var(--player-h); background: #fff; border-top: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 24px; z-index: 100; }
-    .player-track { display: flex; align-items: center; gap: 14px; width: 280px; }
+    .player-bar { position: fixed; bottom: 0; left: var(--sidebar); right: 0; height: var(--player-h); background: #fff; border-top: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 20px; z-index: 100; gap: 12px; }
+    .player-track { display: flex; align-items: center; gap: 12px; min-width: 200px; flex: 0 0 220px; }
     .player-art { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #1E293B, #0F172A); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .player-track-info { min-width: 0; }
+    .player-track-info { min-width: 0; flex: 1; }
     .player-track-title { font-size: 13px; font-weight: 600; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
     .player-track-author { font-size: 12px; color: #64748B; font-weight: 500; }
-    .player-controls { display: flex; align-items: center; gap: 6px; margin: 0 auto; }
-    .ctrl-btn { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: #64748B; cursor: pointer; transition: all 0.15s; }
+    /* Center controls + progress */
+    .player-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .player-controls { display: flex; align-items: center; gap: 4px; }
+    .ctrl-btn { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: #64748B; cursor: pointer; transition: all 0.15s; font-size: 11px; font-weight: 700; font-family: inherit; }
     .ctrl-btn:hover { color: #0F172A; background: #F1F5F9; }
     .ctrl-btn.play-btn { width: 42px; height: 42px; background: #38BDF8; color: #fff; box-shadow: 0 2px 8px rgba(56,189,248,0.3); }
     .ctrl-btn.play-btn:hover { background: #0EA5E9; }
+    .ctrl-btn.skip-label { width: auto; padding: 0 4px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+    /* Speed button */
+    .speed-btn { height: 26px; padding: 0 8px; border-radius: 6px; border: 1.5px solid #CBD5E1; background: transparent; color: #475569; font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .speed-btn:hover { border-color: #38BDF8; color: #38BDF8; }
+    /* Progress row */
+    .player-progress-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .player-time { font-size: 11px; color: #94A3B8; font-weight: 500; min-width: 36px; }
+    .player-time.right { text-align: right; }
+    .player-progress-bar { flex: 1; height: 4px; border-radius: 3px; background: #E2E8F0; cursor: pointer; position: relative; }
+    .player-progress-bar:hover { height: 6px; margin: -1px 0; }
+    .player-progress-fill { height: 100%; border-radius: 3px; background: #38BDF8; position: relative; transition: width 0.1s linear; }
+    .player-progress-fill::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: #38BDF8; opacity: 0; transition: opacity 0.15s; }
+    .player-progress-bar:hover .player-progress-fill::after { opacity: 1; }
+    /* Right extras */
+    .player-extras { display: flex; align-items: center; gap: 6px; flex: 0 0 180px; justify-content: flex-end; }
+    .ext-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: #64748B; cursor: pointer; transition: all 0.15s; }
+    .ext-btn:hover { color: #0F172A; background: #F1F5F9; }
+    .volume-row { display: flex; align-items: center; gap: 6px; }
+    .volume-slider { width: 70px; height: 4px; border-radius: 3px; background: #E2E8F0; cursor: pointer; position: relative; }
+    .volume-slider:hover { height: 6px; }
+    .volume-slider-fill { height: 100%; border-radius: 3px; background: #64748B; width: 100%; }
+    /* Active episode row */
+    .episode-row.playing { background: rgba(56,189,248,0.08); }
+    .episode-row.playing .ep-title { color: #38BDF8; }
     /* Loading */
     .loading-overlay { position: fixed; inset: 0; background: #F8FAFC; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
@@ -106,6 +133,8 @@
       .podcast-hero { flex-direction: column; gap: 20px; }
       .podcast-cover-lg { width: 180px; height: 180px; }
       .podcast-info h1 { font-size: 24px; }
+      .player-track { flex: 0 0 140px; }
+      .player-extras { display: none; }
       .mobile-nav { display: flex; position: fixed; bottom: var(--player-h); left: 0; right: 0; height: 56px; background: #fff; border-top: 1px solid #E2E8F0; z-index: 99; align-items: center; justify-content: space-around; padding: 0 8px; }
     }
     @media (min-width: 769px) { .mobile-nav { display: none; } }
@@ -194,18 +223,65 @@
     </main>
   </div>
 
-  <!-- Player Bar -->
+  <!-- Player Bar (full Spotify-like controls) -->
   <div class="player-bar">
+    <!-- Track info -->
     <div class="player-track">
-      <div class="player-art"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg></div>
-      <div class="player-track-info"><div class="player-track-title">Select an episode</div><div class="player-track-author">Tap play to listen</div></div>
+      <div class="player-art" id="playerArt">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+      </div>
+      <div class="player-track-info">
+        <div class="player-track-title" id="playerTrackTitle">Select an episode</div>
+        <div class="player-track-author" id="playerTrackAuthor">Tap play to listen</div>
+      </div>
     </div>
-    <div class="player-controls">
-      <button class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
-      <button class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M18.07 12a5.03 5.03 0 0 0-1.11-2.96"/><path d="M22 12a9.03 9.03 0 0 0-3.29-6.96"/></svg></button>
-      <button class="ctrl-btn play-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></button>
-      <button class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 5 18 9h4v6h-4l-5 4V5z"/><path d="M5.93 12a5.03 5.03 0 0 0 1.11 2.96"/><path d="M2 12a9.03 9.03 0 0 0 3.29 6.96"/></svg></button>
-      <button class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+
+    <!-- Center: controls + progress -->
+    <div class="player-center">
+      <div class="player-controls">
+        <!-- Prev episode -->
+        <button class="ctrl-btn" id="playerPrev" title="Previous episode">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+        </button>
+        <!-- Skip back 15s -->
+        <button class="ctrl-btn" id="playerSkipBack" title="Rewind 15 seconds">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/><text x="7" y="14" font-size="6" font-weight="bold" fill="currentColor" stroke="none">15</text></svg>
+        </button>
+        <!-- Play / Pause -->
+        <button class="ctrl-btn play-btn" id="playerPlayBtn" title="Play / Pause">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <!-- Skip forward 30s -->
+        <button class="ctrl-btn" id="playerSkipForward" title="Forward 30 seconds">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/><text x="7" y="14" font-size="6" font-weight="bold" fill="currentColor" stroke="none">30</text></svg>
+        </button>
+        <!-- Next episode -->
+        <button class="ctrl-btn" id="playerNext" title="Next episode">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <!-- Speed -->
+        <button class="speed-btn" id="playerSpeedBtn" title="Playback speed">1x</button>
+      </div>
+      <!-- Progress bar -->
+      <div class="player-progress-row">
+        <span class="player-time" id="playerCurrentTime">0:00</span>
+        <div class="player-progress-bar" id="playerProgressBar">
+          <div class="player-progress-fill" id="playerProgressFill" style="width:0%"></div>
+        </div>
+        <span class="player-time right" id="playerDuration">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: volume + extras -->
+    <div class="player-extras">
+      <div class="volume-row">
+        <button class="ext-btn" id="playerVolumeIcon" title="Mute / Unmute">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <div class="volume-slider" id="playerVolumeSlider">
+          <div class="volume-slider-fill" id="playerVolumeFill" style="width:100%"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -292,26 +368,45 @@
       container.innerHTML = '<p style="color:#94A3B8;padding:20px;">No episodes yet.</p>';
       return;
     }
+    // Build playlist for SWPlayer
+    window._episodePlaylist = episodes.map(function(e) {
+      return {
+        id: e.id,
+        title: e.title || 'Untitled',
+        audioUrl: e.audio_url || '',
+        podcastTitle: podcastData ? (podcastData.title || '') : '',
+        podcastId: podcastId,
+      };
+    });
     episodes.forEach(function(e, i) {
+      var hasAudio = !!e.audio_url;
       container.innerHTML +=
-        '<div class="episode-row" onclick="location.href=\'/podcast?id=' + encodeURIComponent(podcastId) + '\'">' +
+        '<div class="episode-row" data-episode-id="' + esc(e.id) + '" onclick="location.href=\'/podcast?id=' + encodeURIComponent(podcastId) + '\'">' +
           '<span class="episode-num">' + (i + 1) + '</span>' +
           '<div class="episode-info">' +
             '<div class="ep-title">' + esc(e.title) + '</div>' +
             '<div class="ep-meta">' + getTimeAgo(e.published_at) + '</div>' +
           '</div>' +
           '<span class="episode-dur">' + formatDuration(e.duration) + '</span>' +
-          '<button class="episode-play" onclick="event.stopPropagation();playEpisode(\'' + encodeURIComponent(e.id) + '\',\'' + esc(e.title.replace(/'/g,"\\'")) + '\')">' +
+          '<button class="episode-play" data-episode-id="' + esc(e.id) + '"' +
+            (hasAudio ? '' : ' disabled title="No audio available" style="opacity:0.4;cursor:not-allowed;"') +
+            ' onclick="event.stopPropagation();playEpisode(\'' + esc(e.id) + '\',\'' + esc((e.title||'').replace(/'/g,"\\'")) + '\',\'' + esc((e.audio_url||'')) + '\',' + i + ')">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="#475569"><polygon points="5,3 19,12 5,21"/></svg>' +
           '</button>' +
         '</div>';
     });
   }
 
-  function playEpisode(episodeId, title) {
-    console.log('Playing episode:', episodeId, title);
-    PUBLIC_API.post('/api/activity', { episode_id: episodeId, podcast_id: podcastId, action: 'played' })
-      .catch(function(e) { console.warn('[Activity]', e); });
+  function playEpisode(episodeId, title, audioUrl, idx) {
+    // Build SWPlayer episode object
+    var ep = {
+      id: episodeId,
+      title: title,
+      audioUrl: audioUrl,
+      podcastTitle: podcastData ? (podcastData.title || '') : '',
+      podcastId: podcastId,
+    };
+    SWPlayer.play(ep, window._episodePlaylist || [], idx || 0);
   }
 
   // Rating

@@ -89,7 +89,8 @@
           if (response.ok && data.token) {
             localStorage.setItem('admin_token', data.token);
             localStorage.setItem('admin_email', email);
-            window.location.href = 'dashboard.html';
+            // Use replace() so Back button on dashboard doesn't return here
+            window.location.replace('dashboard.html');
           } else {
             showError(data.error || 'Invalid email or password.');
             loginBtn.disabled = false;
@@ -113,8 +114,11 @@
         fetch('/api/admin/verify', {
           headers: { 'Authorization': 'Bearer ' + token }
         }).then(r => {
-          if (r.ok) window.location.href = 'dashboard.html';
+          if (r.ok) window.location.replace('dashboard.html');
         }).catch(() => {});
+      } else {
+        // Ensure this login page can't be navigated back to from dashboard
+        history.replaceState(null, '', window.location.href);
       }
     })();
   </script>

@@ -6,6 +6,7 @@
   <title>SoundWave - Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="auth.js"></script>
+  <script src="player.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -534,19 +535,19 @@
       border-top: 1px solid #E2E8F0;
       display: flex;
       align-items: center;
-      padding: 0 24px;
+      padding: 0 20px;
       z-index: 100;
+      gap: 12px;
     }
-
     .player-track {
       display: flex;
       align-items: center;
-      gap: 14px;
-      width: 280px;
+      gap: 12px;
+      min-width: 200px;
+      flex: 0 0 220px;
     }
     .player-art {
-      width: 48px;
-      height: 48px;
+      width: 48px; height: 48px;
       border-radius: 10px;
       background: linear-gradient(135deg, #1E293B, #0F172A);
       flex-shrink: 0;
@@ -554,139 +555,70 @@
       align-items: center;
       justify-content: center;
     }
-    .player-track-info { min-width: 0; }
-    .player-track-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #0F172A;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 3px;
-    }
-    .player-track-author {
-      font-size: 12px;
-      color: #64748B;
-      font-weight: 500;
-    }
+    .player-track-info { min-width: 0; flex: 1; }
+    .player-track-title { font-size: 13px; font-weight: 600; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+    .player-track-author { font-size: 12px; color: #64748B; font-weight: 500; }
 
-    .player-progress-area {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-    }
-    .player-time {
-      font-size: 11px;
-      color: #94A3B8;
-      font-weight: 500;
-      min-width: 36px;
-    }
-    .player-progress {
-      width: 360px;
-      height: 4px;
-      border-radius: 3px;
-      background: #E2E8F0;
-      cursor: pointer;
-      position: relative;
-    }
-    .player-progress-fill {
-      width: 35%;
-      height: 100%;
-      border-radius: 3px;
-      background: #38BDF8;
-      position: relative;
-    }
-    .player-progress-fill::after {
-      content: '';
-      position: absolute;
-      right: -5px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #38BDF8;
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-    .player-progress:hover .player-progress-fill::after { opacity: 1; }
-
-    .player-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    /* Center — controls + progress */
+    .player-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .player-controls { display: flex; align-items: center; gap: 4px; }
     .ctrl-btn {
-      width: 34px;
-      height: 34px;
+      width: 34px; height: 34px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       border: none;
       background: transparent;
       color: #64748B;
       cursor: pointer;
       transition: all 0.15s;
+      font-size: 11px; font-weight: 700; font-family: inherit;
     }
     .ctrl-btn:hover { color: #0F172A; background: #F1F5F9; }
     .ctrl-btn.play-btn {
-      width: 42px;
-      height: 42px;
+      width: 42px; height: 42px;
       background: #38BDF8;
       color: #fff;
       box-shadow: 0 2px 8px rgba(56,189,248,0.3);
     }
     .ctrl-btn.play-btn:hover { background: #0EA5E9; }
-
-    .player-extras {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      width: 200px;
-      justify-content: flex-end;
-    }
-    .ext-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
+    .speed-btn {
+      height: 26px; padding: 0 8px;
+      border-radius: 6px;
+      border: 1.5px solid #CBD5E1;
       background: transparent;
-      color: #64748B;
+      color: #475569;
+      font-size: 11px; font-weight: 700; font-family: inherit;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .ext-btn:hover { color: #0F172A; background: #F1F5F9; }
+    .speed-btn:hover { border-color: #38BDF8; color: #38BDF8; }
 
-    .player-volume {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .volume-slider {
-      width: 70px;
-      height: 4px;
-      border-radius: 3px;
-      background: #E2E8F0;
-      cursor: pointer;
-      position: relative;
-    }
-    .volume-slider-fill {
-      width: 60%;
-      height: 100%;
-      border-radius: 3px;
-      background: #64748B;
-    }
+    /* Progress row */
+    .player-progress-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .player-time { font-size: 11px; color: #94A3B8; font-weight: 500; min-width: 36px; }
+    .player-time.right { text-align: right; }
+    .player-progress-bar { flex: 1; height: 4px; border-radius: 3px; background: #E2E8F0; cursor: pointer; position: relative; }
+    .player-progress-bar:hover { height: 6px; margin: -1px 0; }
+    .player-progress-fill { height: 100%; border-radius: 3px; background: #38BDF8; position: relative; transition: width 0.1s linear; }
+    .player-progress-fill::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: #38BDF8; opacity: 0; transition: opacity 0.15s; }
+    .player-progress-bar:hover .player-progress-fill::after { opacity: 1; }
+
+    /* Right extras */
+    .player-extras { display: flex; align-items: center; gap: 6px; flex: 0 0 180px; justify-content: flex-end; }
+    .ext-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: #64748B; cursor: pointer; transition: all 0.15s; }
+    .ext-btn:hover { color: #0F172A; background: #F1F5F9; }
+    .volume-row { display: flex; align-items: center; gap: 6px; }
+    .volume-slider { width: 70px; height: 4px; border-radius: 3px; background: #E2E8F0; cursor: pointer; position: relative; }
+    .volume-slider:hover { height: 6px; }
+    .volume-slider-fill { height: 100%; border-radius: 3px; background: #64748B; width: 100%; }
+
+    /* Playing episode highlight */
+    .episode-row.playing { background: rgba(56,189,248,0.07); }
+    .episode-row.playing .ep-title { color: #38BDF8; }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1024px) {
       .player-track { width: 200px; }
-      .player-progress { width: 200px; }
       .player-extras { width: 140px; }
       .featured-title { font-size: 28px; }
     }
@@ -710,10 +642,7 @@
 
       .category-card { width: 110px; height: 100px; }
 
-      .player-track { width: 140px; }
-      .player-track-title { font-size: 12px; }
-      .player-progress { width: 100px; }
-      .player-time { display: none; }
+      .player-track { flex: 0 0 140px; }
       .player-extras { display: none; }
     }
 
@@ -973,111 +902,56 @@
 
   <!-- ===== PLAYER BAR ===== -->
   <div class="player-bar">
+    <!-- Track info -->
     <div class="player-track">
-      <div class="player-art">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
-          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
-          <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
-          <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
-          <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>
-        </svg>
+      <div class="player-art" id="playerArt">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
       </div>
       <div class="player-track-info">
-        <div class="player-track-title">The Daily: Understanding the Crisis</div>
-        <div class="player-track-author">New York Times</div>
+        <div class="player-track-title" id="playerTrackTitle">Select an episode</div>
+        <div class="player-track-author" id="playerTrackAuthor">Tap play to listen</div>
       </div>
-      <button class="icon-btn" style="width:28px;height:28px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-      </button>
     </div>
 
-    <div class="player-controls">
-      <button class="ctrl-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1 4 1 10 7 10"/>
-          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-        </svg>
-      </button>
-      <button class="ctrl-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11 5 6 9H2v6h4l5 4V5z"/>
-          <path d="M18.07 12a5.03 5.03 0 0 0-1.11-2.96"/>
-          <path d="M22 12a9.03 9.03 0 0 0-3.29-6.96"/>
-        </svg>
-      </button>
-      <button class="ctrl-btn play-btn">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-      </button>
-      <button class="ctrl-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M13 5 18 9h4v6h-4l-5 4V5z"/>
-          <path d="M5.93 12a5.03 5.03 0 0 0 1.11 2.96"/>
-          <path d="M2 12a9.03 9.03 0 0 0 3.29 6.96"/>
-        </svg>
-      </button>
-      <button class="ctrl-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="player-progress-area">
-      <span class="player-time">11:24</span>
-      <div class="player-progress">
-        <div class="player-progress-fill"></div>
-      </div>
-      <span class="player-time">32:15</span>
-    </div>
-
-    <div class="player-extras">
-      <button class="ext-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-        </svg>
-      </button>
-      <button class="ext-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-      </button>
-      <button class="ext-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-          <line x1="8" y1="23" x2="16" y2="23"/>
-        </svg>
-      </button>
-      <div class="player-volume">
-        <button class="ext-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <line x1="23" y1="9" x2="17" y2="15"/>
-            <line x1="17" y1="9" x2="23" y2="15"/>
-          </svg>
+    <!-- Center: controls + progress -->
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="ctrl-btn" id="playerPrev" title="Previous">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
         </button>
-        <div class="volume-slider">
-          <div class="volume-slider-fill"></div>
+        <button class="ctrl-btn" id="playerSkipBack" title="Rewind 15s">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
+        <button class="ctrl-btn play-btn" id="playerPlayBtn" title="Play / Pause">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <button class="ctrl-btn" id="playerSkipForward" title="Forward 30s">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+        <button class="ctrl-btn" id="playerNext" title="Next">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+        <button class="speed-btn" id="playerSpeedBtn" title="Speed">1x</button>
+      </div>
+      <div class="player-progress-row">
+        <span class="player-time" id="playerCurrentTime">0:00</span>
+        <div class="player-progress-bar" id="playerProgressBar">
+          <div class="player-progress-fill" id="playerProgressFill" style="width:0%"></div>
+        </div>
+        <span class="player-time right" id="playerDuration">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: volume -->
+    <div class="player-extras">
+      <div class="volume-row">
+        <button class="ext-btn" id="playerVolumeIcon" title="Mute">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <div class="volume-slider" id="playerVolumeSlider">
+          <div class="volume-slider-fill" id="playerVolumeFill" style="width:100%"></div>
         </div>
       </div>
-      <button class="ext-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="8 3 15 3 22 3"/>
-          <polyline points="2 21 9 21 16 21"/>
-          <polyline points="15 3 21 3 21 9"/>
-          <polyline points="9 21 3 21 3 15"/>
-          <line x1="3" y1="3" x2="21" y2="21"/>
-        </svg>
-      </button>
     </div>
   </div>
 
@@ -1250,12 +1124,22 @@
       var container = document.getElementById('episodeList');
       container.innerHTML = '';
       if (list.length === 0) { container.innerHTML = '<p style="color:#94A3B8;padding:20px;">No episodes yet.</p>'; return; }
-      list.slice(0, 4).forEach(function(e) {
+      list.slice(0, 4).forEach(function(e, idx) {
         var grad = pickGradient(podcastGradients, e.id);
         var podcastTitle = (e.podcasts && e.podcasts.title) || '';
         var author = (e.podcasts && e.podcasts.author) || '';
+        var hasAudio = !!e.audio_url;
+        // Store episode in global list for SWPlayer
+        if (!window._homeEpisodeList) window._homeEpisodeList = [];
+        window._homeEpisodeList.push({
+          id: e.id,
+          title: e.title || 'Untitled',
+          audioUrl: e.audio_url || '',
+          podcastTitle: podcastTitle || author,
+          podcastId: e.podcast_id,
+        });
         container.innerHTML +=
-          '<div class="episode-row" onclick="location.href=\'/podcast?id=' + encodeURIComponent(e.podcast_id) + '\'">' +
+          '<div class="episode-row" data-episode-id="' + esc(e.id) + '" onclick="location.href=\'/podcast?id=' + encodeURIComponent(e.podcast_id) + '\'">' +
             '<div class="episode-thumb" style="background:linear-gradient(135deg,' + grad + ');">' +
               '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">' +
                 '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>' +
@@ -1266,7 +1150,11 @@
               '<div class="ep-meta">' + esc(author || podcastTitle) + ' \u00B7 ' + getTimeAgo(e.published_at) + '</div>' +
             '</div>' +
             '<span class="episode-dur">' + formatDuration(e.duration) + '</span>' +
-            '<button class="episode-play" onclick="event.stopPropagation();console.log(\'Play episode:\',\'' + encodeURIComponent(e.id) + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="#475569"><polygon points="5,3 19,12 5,21"/></svg></button>' +
+            '<button class="episode-play" data-episode-id="' + esc(e.id) + '"' +
+              (hasAudio ? '' : ' disabled style="opacity:0.4;cursor:not-allowed;"') +
+              ' onclick="event.stopPropagation();if(window._homeEpisodeList){var ep=window._homeEpisodeList.find(function(x){return x.id===\'' + esc(e.id) + '\';});if(ep)SWPlayer.play(ep,window._homeEpisodeList,' + idx + ');}">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="#475569"><polygon points="5,3 19,12 5,21"/></svg>' +
+            '</button>' +
           '</div>';
       });
     } catch (e) { console.warn('[Episodes]', e); }

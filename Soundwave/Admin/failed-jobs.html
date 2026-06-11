@@ -6,6 +6,8 @@
   <title>Failed Jobs - Soundwave Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- Auth guard: must be first script so protected content is blocked immediately -->
+  <script src="admin-auth.js"></script>
 </head>
 <body>
   <div class="admin-layout">
@@ -142,19 +144,8 @@
 
   <script>
     (function() {
-      const token = localStorage.getItem('admin_token');
-      if (!token) { window.location.href = 'login.html'; return; }
-
-      const email = localStorage.getItem('admin_email') || 'admin@soundwave.com';
-      document.getElementById('displayEmail').textContent = email;
-      document.querySelector('.user-avatar').textContent = email.charAt(0).toUpperCase();
-
-      document.getElementById('logoutBtn').addEventListener('click', function(e) {
-        e.preventDefault();
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_email');
-        window.location.href = 'login.html';
-      });
+      // Auth guard and logout are handled by admin-auth.js
+      const token = ADMIN_AUTH.getToken();
 
       // --- Sample data ---
       const SAMPLE_FAILED_FEEDS = [
