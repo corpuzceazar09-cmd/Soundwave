@@ -223,7 +223,7 @@
 
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   function getTimeAgo(date) { if (!date) return ''; var sec = Math.floor((Date.now() - new Date(date)) / 1000); if (sec < 60) return 'just now'; var min = Math.floor(sec / 60); if (min < 60) return min + ' min ago'; var hr = Math.floor(min / 60); if (hr < 24) return hr + ' hour' + (hr > 1 ? 's' : '') + ' ago'; var d = Math.floor(hr / 24); return d + ' day' + (d > 1 ? 's' : '') + ' ago'; }
-  function formatDuration(dur) { if (!dur) return '0:00'; var parts = dur.split(':'); if (parts.length === 2) return dur; var totalSec = parseInt(dur, 10); if (isNaN(totalSec)) return '0:00'; var m = Math.floor(totalSec / 60); var s = totalSec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+  function formatDuration(dur) { if (dur == null) return '0:00'; if (typeof dur === 'number') { var m = Math.floor(dur / 60); var s = Math.floor(dur % 60); return m + ':' + (s < 10 ? '0' : '') + s; } var parts = dur.split(':'); if (parts.length === 2) return dur; var totalSec = parseInt(dur, 10); if (isNaN(totalSec)) return '0:00'; var m = Math.floor(totalSec / 60); var s = totalSec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
 
   var colors = [['#1E293B','#0F172A'],['#1E3A5F','#0C2233'],['#2D1B69','#1A0D3B'],['#5B1E3A','#2E0F1D'],['#1B4D3E','#0D2B22'],['#6B3A1E','#3D1F0F']];
   function pickColor(id) {

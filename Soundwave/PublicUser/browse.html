@@ -608,7 +608,8 @@
   }
 
   function formatDuration(dur) {
-    if (!dur) return '0:00';
+    if (dur == null) return '0:00';
+    if (typeof dur === 'number') { var m = Math.floor(dur / 60); var s = Math.floor(dur % 60); return m + ':' + (s < 10 ? '0' : '') + s; }
     var parts = dur.split(':');
     if (parts.length === 2) return dur;
     var totalSec = parseInt(dur, 10);
