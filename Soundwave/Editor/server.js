@@ -72,7 +72,7 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:8081', credentials: true }));
 app.use(express.json());
 
 // ---------------------------------------------------------------------------

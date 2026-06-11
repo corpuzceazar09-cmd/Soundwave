@@ -3,6 +3,7 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
+const { body, query, validationResult } = require('express-validator');
 const cors = require('cors');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
@@ -117,7 +118,7 @@ const signupLimiter = rateLimit({
   message: { error: 'Too many attempts. Try again in 15 minutes.' },
 });
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:8082', credentials: true }));
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
@@ -161,20 +162,28 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// Validation middleware
+function validate(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array().map(e => ({ field: e.path, message: e.msg })) });
+  }
+  next();
+}
+
 // ---------------------------------------------------------------------------
 // Routes: Auth
 // ---------------------------------------------------------------------------
 
 // POST /api/auth/signup
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup',
+  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  validate,
+  async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
 
     // Create user in Firebase Auth
     const fbResult = await callFirebaseAPI('accounts:signUp', {
@@ -226,12 +235,13 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 // POST /api/auth/login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login',
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').notEmpty().withMessage('Password is required'),
+  validate,
+  async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
 
     // Authenticate with Firebase Identity Toolkit
     const fbResult = await callFirebaseAPI('accounts:signInWithPassword', {
@@ -528,7 +538,11 @@ app.get('/api/debug/me', authMiddleware, (req, res) => {
 // ---------------------------------------------------------------------------
 
 // POST /api/ratings - submit/update a rating
-app.post('/api/ratings', authMiddleware, async (req, res) => {
+app.post('/api/ratings', authMiddleware,
+  body('podcast_id').notEmpty().withMessage('podcast_id is required'),
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+  validate,
+  async (req, res) => {
   try {
     const { podcast_id, rating } = req.body;
     const user_id = req.user.supabase_uid || req.user.sub;
@@ -573,7 +587,11 @@ app.get('/api/ratings/:podcast_id', authMiddleware, async (req, res) => {
 });
 
 // POST /api/follows - follow/unfollow
-app.post('/api/follows', authMiddleware, async (req, res) => {
+app.post('/api/follows', authMiddleware,
+  body('podcast_id').notEmpty().withMessage('podcast_id is required'),
+  body('follow').isBoolean().withMessage('follow must be true or false'),
+  validate,
+  async (req, res) => {
   try {
     const { podcast_id, follow, title, image_url } = req.body;
     const user_id = req.user.supabase_uid || req.user.sub;
@@ -645,7 +663,13 @@ app.get('/api/follows', authMiddleware, async (req, res) => {
 });
 
 // POST /api/activity - log user activity
-app.post('/api/activity', authMiddleware, async (req, res) => {
+app.post('/api/activity', authMiddleware,
+  body('action').isIn(['played', 'paused', 'completed', 'skipped']).withMessage('Invalid action'),
+  body('episode_id').optional({ values: 'falsy' }).notEmpty().withMessage('episode_id cannot be empty'),
+  body('podcast_id').optional({ values: 'falsy' }).notEmpty().withMessage('podcast_id cannot be empty'),
+  body('listened_seconds').optional({ values: 'falsy' }).isInt({ min: 0 }).withMessage('listened_seconds must be a positive number'),
+  validate,
+  async (req, res) => {
   try {
     const { episode_id, podcast_id, action, listened_seconds, episode_title, podcast_title, audio_url, duration } = req.body;
     const user_id = req.user.supabase_uid || req.user.sub;
@@ -711,7 +735,11 @@ app.delete('/api/activity', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/profile - update user profile
-app.put('/api/profile', authMiddleware, async (req, res) => {
+app.put('/api/profile', authMiddleware,
+  body('display_name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('display_name must be 1-100 characters'),
+  body('avatar_url').optional({ values: 'falsy' }).isURL().withMessage('avatar_url must be a valid URL'),
+  validate,
+  async (req, res) => {
   try {
     const user_id = req.user.sub;
     const { display_name, avatar_url } = req.body;
