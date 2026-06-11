@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@/lib/firebase';
 import { getListeningHistory } from '@/lib/firestoreApi';
@@ -70,35 +70,30 @@ function HistorySection({ title, items }: { title: string; items: any[] }) {
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const user = auth.currentUser;
-      if (!user) { setLoading(false); return; }
-      const items = await getListeningHistory(user.uid, 50);
-      if (items.length > 0) {
-        const episodeIds = items.map((h: any) => h.episode_id);
-        const { data: episodes } = await supabase
-          .from('episodes')
-          .select('id, title')
-          .in('id', episodeIds);
-        const titleMap: Record<string, string> = {};
-        (episodes || []).forEach((ep: any) => { titleMap[ep.id] = ep.title; });
-        setHistory(items.map((h: any) => ({ ...h, title: titleMap[h.episode_id] || 'Unknown Episode' })));
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      async function load() {
+        const user = auth.currentUser;
+        const userId = user?.uid || '';
+        const items = await getListeningHistory(userId, 50);
+        if (cancelled) return;
+        if (items.length > 0) {
+          const episodeIds = items.map((h: any) => h.episode_id);
+          const { data: episodes } = await supabase
+            .from('episodes')
+            .select('id, title')
+            .in('id', episodeIds);
+          const titleMap: Record<string, string> = {};
+          (episodes || []).forEach((ep: any) => { titleMap[ep.id] = ep.title; });
+          if (!cancelled) setHistory(items.map((h: any) => ({ ...h, title: titleMap[h.episode_id] || 'Unknown Episode' })));
+        }
       }
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#38BDF8" />
-      </View>
-    );
-  }
+      load();
+      return () => { cancelled = true; };
+    }, [])
+  );
 
   return (
     <ScrollView

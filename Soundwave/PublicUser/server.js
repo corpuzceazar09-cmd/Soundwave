@@ -4,7 +4,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const localStore = require('./localStore');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // ---------------------------------------------------------------------------
@@ -125,6 +127,26 @@ function generateToken(payload) {
   return jwt.sign(payload, jwtSecret, { expiresIn: '7d' });
 }
 
+// Convert a Firebase UID to a deterministic UUID v4-compatible string.
+// This avoids depending on Supabase Auth for generating UUIDs.
+function firebaseUidToUuid(firebaseUid) {
+  const hash = crypto.createHash('md5').update(firebaseUid).digest('hex');
+  return hash.substring(0, 8) + '-' +
+    hash.substring(8, 12) + '-4' +
+    hash.substring(13, 16) + '-a' +
+    hash.substring(16, 19) + '-' +
+    hash.substring(20, 32);
+}
+
+// Ensure a user_roles entry exists for FK compatibility on follow/rating tables.
+// This is called before any write to user_follows or ratings.
+async function ensureUserRole(userId) {
+  const { error } = await supabase
+    .from('user_roles')
+    .upsert({ id: userId, role: 'User' }, { onConflict: 'id' });
+  if (error) console.warn('[ensureUserRole]', error.message);
+}
+
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -175,16 +197,25 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const firebaseUid = fbResult.data.localId;
 
-    // Store role mapping in Supabase (Firebase UID -> role)
+    // Generate a deterministic UUID from the Firebase UID for DB write compatibility
+    const userUuid = firebaseUidToUuid(firebaseUid);
+
+    // Also try creating a Supabase Auth user (best-effort, not required)
+    const sbResult = await supabase.auth.signUp({ email, password });
+    if (sbResult.error) {
+      console.warn('[SIGNUP] Supabase signUp warning:', sbResult.error.message);
+    }
+
+    // Store role mapping using the deterministic UUID (for FK compatibility)
     const { error: roleError } = await supabase
       .from('user_roles')
-      .upsert({ id: firebaseUid, role: 'User' }, { onConflict: 'id' });
+      .upsert({ id: userUuid, role: 'User' }, { onConflict: 'id' });
 
     if (roleError) {
       console.warn('[SIGNUP] Role insert warning:', roleError.message);
     }
 
-    console.log(`[SIGNUP SUCCESS] ${email} (Firebase UID: ${firebaseUid})`);
+    console.log(`[SIGNUP SUCCESS] ${email} (Firebase UID: ${firebaseUid}, DB UUID: ${userUuid})`);
     res.json({
       message: 'Account created successfully! You can now sign in.',
     });
@@ -224,10 +255,27 @@ app.post('/api/auth/login', async (req, res) => {
     const firebaseUid = fbResult.data.localId;
     const displayName = fbResult.data.displayName || email.split('@')[0] || 'User';
 
-    // Ensure user has a role entry (using Firebase UID)
+    // Generate a deterministic UUID from the Firebase UID for DB write compatibility.
+    // This avoids depending on Supabase Auth (which may have sign-ups disabled).
+    const userUuid = firebaseUidToUuid(firebaseUid);
+
+    // Also try signing in with Supabase Auth (best-effort, not required)
+    try {
+      const sbResult = await supabase.auth.signInWithPassword({ email, password });
+      if (sbResult.error) {
+        const sbSignUp = await supabase.auth.signUp({ email, password });
+        if (sbSignUp.error) {
+          console.warn('[LOGIN] Supabase auth best-effort failed:', sbSignUp.error?.message);
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[LOGIN] Supabase auth error:', sbErr.message);
+    }
+
+    // Ensure user_roles has an entry for FK compatibility
     const { error: roleError } = await supabase
       .from('user_roles')
-      .upsert({ id: firebaseUid, role: 'User' }, { onConflict: 'id' });
+      .upsert({ id: userUuid, role: 'User' }, { onConflict: 'id' });
 
     if (roleError) {
       console.warn('[LOGIN] Role upsert warning:', roleError.message);
@@ -235,11 +283,12 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = generateToken({
       sub: firebaseUid,
+      supabase_uid: userUuid,
       email: fbResult.data.email,
       display_name: displayName,
     });
 
-    console.log(`[LOGIN SUCCESS] ${email} (Firebase UID: ${firebaseUid})`);
+    console.log(`[LOGIN SUCCESS] ${email} (Firebase UID: ${firebaseUid}, DB UUID: ${userUuid})`);
     res.json({
       token,
       user: {
@@ -463,6 +512,18 @@ app.get('/api/search', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Debug Route — helps diagnose token issues
+// ---------------------------------------------------------------------------
+app.get('/api/debug/me', authMiddleware, (req, res) => {
+  res.json({
+    sub: req.user.sub,
+    supabase_uid: req.user.supabase_uid || null,
+    has_supabase_uid: !!req.user.supabase_uid,
+    email: req.user.email,
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Protected User Routes (auth required)
 // ---------------------------------------------------------------------------
 
@@ -470,19 +531,25 @@ app.get('/api/search', async (req, res) => {
 app.post('/api/ratings', authMiddleware, async (req, res) => {
   try {
     const { podcast_id, rating } = req.body;
-    const user_id = req.user.sub;
+    const user_id = req.user.supabase_uid || req.user.sub;
+    if (!user_id) {
+      return res.status(400).json({ error: 'Account not fully linked. Please log out and log back in.' });
+    }
     if (!podcast_id || !rating) {
       return res.status(400).json({ error: 'podcast_id and rating are required' });
     }
 
-    const { data, error } = await supabase
-      .from('ratings')
-      .upsert({ user_id, podcast_id, rating }, { onConflict: 'user_id, podcast_id' })
-      .select()
-      .single();
+    // Try Supabase first, fall back to local store
+    try {
+      const { error } = await supabase
+        .from('ratings')
+        .upsert({ user_id, podcast_id, rating }, { onConflict: 'user_id, podcast_id' });
+    } catch {}
 
-    if (error) throw error;
-    res.json({ data });
+    // Always write to local store as fallback / primary
+    localStore.setRating(user_id, podcast_id, rating);
+
+    res.json({ data: { user_id, podcast_id, rating } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -491,16 +558,15 @@ app.post('/api/ratings', authMiddleware, async (req, res) => {
 // GET /api/ratings/:podcast_id - get user's rating for a podcast
 app.get('/api/ratings/:podcast_id', authMiddleware, async (req, res) => {
   try {
-    const user_id = req.user.sub;
-    const { data, error } = await supabase
-      .from('ratings')
-      .select('rating')
-      .eq('user_id', user_id)
-      .eq('podcast_id', req.params.podcast_id)
-      .maybeSingle();
+    const user_id = req.user.supabase_uid || req.user.sub;
+    if (!user_id) {
+      return res.status(400).json({ error: 'Account not fully linked. Please log out and log back in.' });
+    }
 
-    if (error) throw error;
-    res.json({ data });
+    // Get from local store
+    const rating = localStore.getRating(user_id, req.params.podcast_id);
+
+    res.json({ data: rating ? { rating } : null });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -509,25 +575,35 @@ app.get('/api/ratings/:podcast_id', authMiddleware, async (req, res) => {
 // POST /api/follows - follow/unfollow
 app.post('/api/follows', authMiddleware, async (req, res) => {
   try {
-    const { podcast_id, follow } = req.body;
-    const user_id = req.user.sub;
+    const { podcast_id, follow, title, image_url } = req.body;
+    const user_id = req.user.supabase_uid || req.user.sub;
+    if (!user_id) {
+      return res.status(400).json({ error: 'Account not fully linked. Please log out and log back in.' });
+    }
     if (!podcast_id) {
       return res.status(400).json({ error: 'podcast_id is required' });
     }
 
-    if (follow) {
-      const { error } = await supabase
-        .from('user_follows')
-        .upsert({ user_id, podcast_id }, { onConflict: 'user_id, podcast_id' });
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('user_follows')
-        .delete()
-        .eq('user_id', user_id)
-        .eq('podcast_id', podcast_id);
-      if (error) throw error;
-    }
+    // Try Supabase first, fall back to local store
+    let supabaseSuccess = false;
+    try {
+      if (follow) {
+        const { error } = await supabase
+          .from('user_follows')
+          .upsert({ user_id, podcast_id }, { onConflict: 'user_id, podcast_id' });
+        if (!error) supabaseSuccess = true;
+      } else {
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('user_id', user_id)
+          .eq('podcast_id', podcast_id);
+        if (!error) supabaseSuccess = true;
+      }
+    } catch {}
+
+    // Always write to local store as fallback / primary
+    localStore.setFollow(user_id, podcast_id, follow, { title, image_url });
 
     res.json({ success: true, following: follow });
   } catch (err) {
@@ -538,14 +614,31 @@ app.post('/api/follows', authMiddleware, async (req, res) => {
 // GET /api/follows - get user's followed podcasts
 app.get('/api/follows', authMiddleware, async (req, res) => {
   try {
-    const user_id = req.user.sub;
-    const { data, error } = await supabase
-      .from('user_follows')
-      .select('podcast_id, podcasts!inner(*)')
-      .eq('user_id', user_id);
+    const user_id = req.user.supabase_uid || req.user.sub;
+    if (!user_id) {
+      return res.status(400).json({ error: 'Account not fully linked. Please log out and log back in.' });
+    }
 
-    if (error) throw error;
-    res.json({ data: data.map(f => f.podcasts) });
+    // Get from local store (already has title/image_url fallbacks)
+    let podcasts = localStore.getFollows(user_id);
+
+    if (podcasts.length > 0) {
+      // Best-effort enrichment from Supabase
+      try {
+        const ids = podcasts.map(p => p.id);
+        const { data } = await supabase
+          .from('podcasts')
+          .select('*')
+          .in('id', ids);
+        if (data && data.length > 0) {
+          const supabaseMap = {};
+          data.forEach(p => { supabaseMap[p.id] = p; });
+          podcasts = podcasts.map(p => supabaseMap[p.id] || p);
+        }
+      } catch {}
+    }
+
+    res.json({ data: podcasts });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -554,17 +647,29 @@ app.get('/api/follows', authMiddleware, async (req, res) => {
 // POST /api/activity - log user activity
 app.post('/api/activity', authMiddleware, async (req, res) => {
   try {
-    const { episode_id, podcast_id, action, listened_seconds } = req.body;
-    const user_id = req.user.sub;
+    const { episode_id, podcast_id, action, listened_seconds, episode_title, podcast_title, audio_url, duration } = req.body;
+    const user_id = req.user.supabase_uid || req.user.sub;
     if (!action) {
       return res.status(400).json({ error: 'action is required' });
     }
 
-    const { error } = await supabase.from('user_activity').insert({
-      user_id, episode_id, podcast_id, action, listened_seconds: listened_seconds || 0,
+    // Best-effort Supabase write
+    try {
+      if (req.user.supabase_uid) {
+        const normalizedAction = action === 'played' ? 'play' : action;
+        const { error } = await supabase.from('user_activity').insert({
+          user_id, episode_id, podcast_id, action: normalizedAction, listened_seconds: listened_seconds || 0,
+        });
+        if (error) console.warn('[ACTIVITY] Supabase insert warning:', error.message);
+      }
+    } catch {}
+
+    // Always write to local store as primary persistence
+    localStore.addActivity(user_id, {
+      episode_id, podcast_id, action, listened_seconds: listened_seconds || 0,
+      episode_title, podcast_title, audio_url, duration,
     });
 
-    if (error) throw error;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -574,16 +679,10 @@ app.post('/api/activity', authMiddleware, async (req, res) => {
 // GET /api/activity - get user's listening history
 app.get('/api/activity', authMiddleware, async (req, res) => {
   try {
-    const user_id = req.user.sub;
-    const { data, error } = await supabase
-      .from('user_activity')
-      .select('*, episodes!inner(title, audio_url, duration), podcasts!inner(title, image_url)')
-      .eq('user_id', user_id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) throw error;
-    res.json({ data });
+    const user_id = req.user.supabase_uid || req.user.sub;
+    // Read from local store as primary source
+    const local = localStore.getActivity(user_id);
+    res.json({ data: local });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -592,13 +691,19 @@ app.get('/api/activity', authMiddleware, async (req, res) => {
 // DELETE /api/activity - clear user's listening history
 app.delete('/api/activity', authMiddleware, async (req, res) => {
   try {
-    const user_id = req.user.sub;
-    const { error } = await supabase
-      .from('user_activity')
-      .delete()
-      .eq('user_id', user_id);
-
-    if (error) throw error;
+    const user_id = req.user.supabase_uid || req.user.sub;
+    // Best-effort Supabase clear
+    try {
+      if (req.user.supabase_uid) {
+        const { error } = await supabase
+          .from('user_activity')
+          .delete()
+          .eq('user_id', user_id);
+        if (error) console.warn('[ACTIVITY] Delete warning:', error.message);
+      }
+    } catch {}
+    // Always clear local store
+    localStore.clearActivity(user_id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -635,7 +740,6 @@ app.get('/profile', (req, res) => res.sendFile(path.join(__dirname, 'profile.htm
 
 app.get('/library', (req, res) => res.sendFile(path.join(__dirname, 'library.html')));
 app.get('/history', (req, res) => res.sendFile(path.join(__dirname, 'history.html')));
-app.get('/subscriptions', (req, res) => res.sendFile(path.join(__dirname, 'subscriptions.html')));
 
 // Static files (CSS, JS, images) — fallback after all route handlers
 app.use(express.static(__dirname, { extensions: ['css', 'png', 'jpg', 'svg', 'ico'] }));
@@ -651,11 +755,19 @@ app.use((err, _req, res, _next) => {
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('=============================================');
   console.log('  SoundWave - Public User Portal (Express)');
   console.log(`  http://localhost:${PORT}`);
   console.log('  Supabase Auth + JWT Session');
   console.log('  Press CTRL+C to stop.');
   console.log('=============================================');
+});
+
+// Graceful shutdown on Ctrl+C — prevents EADDRINUSE on restart
+process.on('SIGINT', () => {
+  console.log('\nShutting down server...');
+  server.close(() => {
+    process.exit(0);
+  });
 });

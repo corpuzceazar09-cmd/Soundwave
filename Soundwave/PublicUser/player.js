@@ -254,6 +254,10 @@
     PUBLIC_API.post('/api/activity', {
       episode_id: ep.id,
       podcast_id: ep.podcastId,
+      episode_title: ep.title,
+      podcast_title: ep.podcastTitle,
+      audio_url: ep.audioUrl,
+      duration: ep.duration,
       action: 'played',
     }).catch(function () {});
   }

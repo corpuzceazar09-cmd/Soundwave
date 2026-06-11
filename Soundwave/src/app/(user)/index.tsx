@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,7 +14,6 @@ export default function UserHomeScreen() {
   const [featured, setFeatured] = useState<any>(null);
   const [trending, setTrending] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -34,8 +32,6 @@ export default function UserHomeScreen() {
         setCategories(categoriesRes.data || []);
       } catch (err) {
         console.error('Home fetch error:', err);
-      } finally {
-        setLoading(false);
       }
     }
     fetchData();
@@ -116,14 +112,6 @@ export default function UserHomeScreen() {
       </ScrollView>
     </View>
   );
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
-  }
 
   return (
     <ScrollView

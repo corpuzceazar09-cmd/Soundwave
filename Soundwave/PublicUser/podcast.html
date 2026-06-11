@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="auth.js"></script>
   <script src="player.js"></script>
+  <script src="navigate.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --sidebar: 240px; --player-h: 80px; --topbar-h: 64px; }
@@ -116,12 +117,6 @@
     /* Active episode row */
     .episode-row.playing { background: rgba(56,189,248,0.08); }
     .episode-row.playing .ep-title { color: #38BDF8; }
-    /* Loading */
-    .loading-overlay { position: fixed; inset: 0; background: #F8FAFC; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; transition: opacity 0.3s; }
-    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-    .loading-overlay .spinner { width: 40px; height: 40px; border: 3px solid #E2E8F0; border-top-color: #38BDF8; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-overlay p { font-size: 14px; color: #64748B; font-weight: 500; }
     /* Mobile */
     @media (max-width: 768px) {
       .sidebar { display: none; }
@@ -138,16 +133,17 @@
       .mobile-nav { display: flex; position: fixed; bottom: var(--player-h); left: 0; right: 0; height: 56px; background: #fff; border-top: 1px solid #E2E8F0; z-index: 99; align-items: center; justify-content: space-around; padding: 0 8px; }
     }
     @media (min-width: 769px) { .mobile-nav { display: none; } }
+    /* Loading spinner */
+    .loading-spinner { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 16px; }
+    .loading-spinner .spinner { width: 36px; height: 36px; border: 3px solid #E2E8F0; border-top-color: #38BDF8; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-spinner span { font-size: 14px; color: #94A3B8; font-weight: 500; }
+    .loading-error { padding: 60px 20px; text-align: center; color: #94A3B8; font-size: 15px; }
     .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: 8px; border: none; background: transparent; cursor: pointer; color: #94A3B8; font-size: 10px; font-weight: 600; font-family: inherit; transition: all 0.15s; }
     .mobile-nav-item.active { color: #38BDF8; }
   </style>
 </head>
 <body>
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <p>Loading podcast...</p>
-  </div>
-
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-brand">
@@ -155,12 +151,12 @@
       <span>SoundWave <small>Discovery</small></span>
     </div>
     <nav class="sidebar-nav">
-      <button class="nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-      <button class="nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Discover</button>
-      <button class="nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-      <button class="nav-item" onclick="location.href='/subscriptions'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>Subscriptions</button>
-      <button class="nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
-      <button class="nav-item" onclick="location.href='/profile'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+      <button class="nav-item" onclick="navigate('/home')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+      <button class="nav-item" onclick="navigate('/browse')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Discover</button>
+      <button class="nav-item" onclick="navigate('/library')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+
+      <button class="nav-item" onclick="navigate('/history')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+      <button class="nav-item" onclick="navigate('/profile')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
     </nav>
     <div class="sidebar-footer">
       <button class="nav-item" id="signOutBtn" style="color:#EF4444;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
@@ -186,6 +182,11 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         Back to Home
       </a>
+
+      <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <span>Loading podcast...</span>
+      </div>
 
       <!-- Podcast Hero -->
       <div class="podcast-hero" id="podcastHero">
@@ -287,16 +288,17 @@
 
   <!-- Mobile Nav -->
   <nav class="mobile-nav">
-    <button class="mobile-nav-item" onclick="location.href='/home'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
-    <button class="mobile-nav-item" onclick="location.href='/browse'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Explore</button>
-    <button class="mobile-nav-item" onclick="location.href='/library'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
-    <button class="mobile-nav-item" onclick="location.href='/history'"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
+    <button class="mobile-nav-item" onclick="navigate('/home')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+    <button class="mobile-nav-item" onclick="navigate('/browse')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Explore</button>
+    <button class="mobile-nav-item" onclick="navigate('/library')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Library</button>
+    <button class="mobile-nav-item" onclick="navigate('/history')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History</button>
   </nav>
 
 <script>
   var podcastId = null;
   var podcastData = null;
 
+  function showLoading(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
   function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   function getTimeAgo(date) { if (!date) return ''; var sec = Math.floor((Date.now() - new Date(date)) / 1000); if (sec < 60) return 'just now'; var min = Math.floor(sec / 60); if (min < 60) return min + ' min ago'; var hr = Math.floor(min / 60); if (hr < 24) return hr + ' hour' + (hr > 1 ? 's' : '') + ' ago'; var d = Math.floor(hr / 24); return d + ' day' + (d > 1 ? 's' : '') + ' ago'; }
   function formatDuration(dur) { if (dur == null) return '0:00'; if (typeof dur === 'number') { var m = Math.floor(dur / 60); var s = Math.floor(dur % 60); return m + ':' + (s < 10 ? '0' : '') + s; } var parts = dur.split(':'); if (parts.length === 2) return dur; var totalSec = parseInt(dur, 10); if (isNaN(totalSec)) return '0:00'; var m = Math.floor(totalSec / 60); var s = totalSec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
@@ -317,25 +319,31 @@
   async function loadPodcast(user) {
     var params = new URLSearchParams(window.location.search);
     podcastId = params.get('id');
-    if (!podcastId) { window.location.href = '/home'; return; }
+    if (!podcastId) { navigate('/home'); return; }
 
     document.querySelector('.avatar').textContent = (user.display_name || user.email || 'U')[0].toUpperCase();
     document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
-    document.querySelector('.avatar').addEventListener('click', function() { location.href = '/profile'; });
+    document.querySelector('.avatar').addEventListener('click', function() { navigate('/profile'); });
 
+    showLoading(true);
     try {
       var resp = await fetch('/api/podcasts/' + encodeURIComponent(podcastId));
       var json = await resp.json();
       podcastData = json.data;
-      if (!podcastData) { document.getElementById('mainContent').innerHTML = '<p style="padding:40px;color:#94A3B8;">Podcast not found.</p>'; document.getElementById('loadingOverlay').classList.add('hidden'); return; }
+      if (!podcastData) {
+        showLoading(false);
+        document.getElementById('mainContent').innerHTML = '<div class="loading-error">Podcast not found.</div>';
+        return;
+      }
 
       renderPodcast(podcastData);
+      showLoading(false);
       loadUserRating();
       checkFollowStatus();
-      document.getElementById('loadingOverlay').classList.add('hidden');
     } catch (e) {
       console.error('[Podcast]', e);
-      document.getElementById('loadingOverlay').querySelector('p').textContent = 'Failed to load.';
+      showLoading(false);
+      document.getElementById('mainContent').innerHTML = '<div class="loading-error">Failed to load podcast. Please try again.</div>';
     }
   }
 
@@ -374,6 +382,7 @@
         id: e.id,
         title: e.title || 'Untitled',
         audioUrl: e.audio_url || '',
+        duration: e.duration || null,
         podcastTitle: podcastData ? (podcastData.title || '') : '',
         podcastId: podcastId,
       };
@@ -381,7 +390,7 @@
     episodes.forEach(function(e, i) {
       var hasAudio = !!e.audio_url;
       container.innerHTML +=
-        '<div class="episode-row" data-episode-id="' + esc(e.id) + '" onclick="location.href=\'/podcast?id=' + encodeURIComponent(podcastId) + '\'">' +
+        '<div class="episode-row" data-episode-id="' + esc(e.id) + '" onclick="navigate(\'/podcast?id=' + encodeURIComponent(podcastId) + '\')">' +
           '<span class="episode-num">' + (i + 1) + '</span>' +
           '<div class="episode-info">' +
             '<div class="ep-title">' + esc(e.title) + '</div>' +
@@ -390,7 +399,7 @@
           '<span class="episode-dur">' + formatDuration(e.duration) + '</span>' +
           '<button class="episode-play" data-episode-id="' + esc(e.id) + '"' +
             (hasAudio ? '' : ' disabled title="No audio available" style="opacity:0.4;cursor:not-allowed;"') +
-            ' onclick="event.stopPropagation();playEpisode(\'' + esc(e.id) + '\',\'' + esc((e.title||'').replace(/'/g,"\\'")) + '\',\'' + esc((e.audio_url||'')) + '\',' + i + ')">' +
+            ' onclick="event.stopPropagation();playEpisode(\'' + esc(e.id) + '\',\'' + esc((e.title||'').replace(/'/g,"\\')")) + '\',\'' + esc((e.audio_url||'')) + '\',' + i + ')">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="#475569"><polygon points="5,3 19,12 5,21"/></svg>' +
           '</button>' +
         '</div>';
@@ -398,15 +407,10 @@
   }
 
   function playEpisode(episodeId, title, audioUrl, idx) {
-    // Build SWPlayer episode object
-    var ep = {
-      id: episodeId,
-      title: title,
-      audioUrl: audioUrl,
-      podcastTitle: podcastData ? (podcastData.title || '') : '',
-      podcastId: podcastId,
-    };
-    SWPlayer.play(ep, window._episodePlaylist || [], idx || 0);
+    var ep = window._episodePlaylist && window._episodePlaylist[idx];
+    if (ep) {
+      SWPlayer.play(ep, window._episodePlaylist, idx);
+    }
   }
 
   // Rating
@@ -425,7 +429,7 @@
   function renderStars(rating) {
     var container = document.getElementById('starRating');
     container.innerHTML = '';
-    for (var i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 5; i++) {
       var active = i <= rating;
       var star = document.createElement('span');
       star.className = 'star ' + (active ? 'active' : 'inactive');
@@ -438,7 +442,13 @@
 
   function submitRating(rating) {
     PUBLIC_API.post('/api/ratings', { podcast_id: podcastId, rating: rating })
-    .then(function() { renderStars(rating); })
+    .then(function(res) {
+      if (res && res.error) {
+        showToast(res.error.includes('log out') ? '⚠️ Please log out and log back in, then try rating again.' : 'Failed to save rating.');
+        return;
+      }
+      renderStars(rating);
+    })
     .catch(function(e) { console.warn('[Rating]', e); });
   }
 
@@ -461,16 +471,38 @@
   }
 
   function toggleFollow(follow) {
-    PUBLIC_API.post('/api/follows', { podcast_id: podcastId, follow: follow })
-    .then(function() { updateFollowBtn(follow); })
+    PUBLIC_API.post('/api/follows', { podcast_id: podcastId, follow: follow, title: podcastData ? podcastData.title : '', image_url: podcastData ? podcastData.image_url : '' })
+    .then(function(res) {
+      if (res && res.error) {
+        showToast(res.error.includes('log out') ? '⚠️ Please log out and log back in, then try following again.' : 'Failed to update follow status.');
+        return;
+      }
+      updateFollowBtn(follow);
+      var countEl = document.getElementById('followerCount');
+      if (countEl) {
+        var val = parseInt(countEl.textContent, 10) || 0;
+        countEl.textContent = Math.max(0, val + (follow ? 1 : -1));
+      }
+    })
     .catch(function(e) { console.warn('[Follow]', e); });
+  }
+
+  function showToast(msg) {
+    var old = document.getElementById('swToast');
+    if (old) old.remove();
+    var el = document.createElement('div');
+    el.id = 'swToast';
+    el.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);white-space:nowrap;';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.remove(); }, 5000);
   }
 
   // Topbar search
   document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('topSearch').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && this.value.trim().length >= 3) {
-        window.location.href = '/browse?q=' + encodeURIComponent(this.value.trim());
+        navigate('/browse?q=' + encodeURIComponent(this.value.trim()));
       }
     });
   });

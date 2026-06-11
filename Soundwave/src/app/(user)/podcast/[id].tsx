@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@/lib/firebase';
-import { savePlayProgress, getPlayProgress, isSubscribed, toggleSubscription } from '@/lib/firestoreApi';
+import { savePlayProgress, getPlayProgress, isSubscribed, toggleSubscription, toggleRating, getRating } from '@/lib/firestoreApi';
 
 type Podcast = {
   id: string;
@@ -35,13 +34,14 @@ export default function PodcastDetailScreen() {
   const router = useRouter();
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
+  const [userRating, setUserRating] = useState(0);
   const positionRef = useRef(0);
   const currentEpisodeRef = useRef<Episode | null>(null);
   const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,14 +73,16 @@ export default function PodcastDetailScreen() {
       setEpisodes(episodesRes.data || []);
 
       const user = auth.currentUser;
-      if (user) {
-        const sub = await isSubscribed(user.uid, id);
-        setSubscribed(sub);
-      }
+      const userId = user?.uid || '';
+      const [sub, rating] = await Promise.all([
+        isSubscribed(userId, id),
+        getRating(userId, id),
+      ]);
+      setSubscribed(sub);
+      if (rating) setUserRating(rating);
     } catch (err) {
       console.error('Podcast load error:', err);
-    } finally {
-      setLoading(false);
+      setLoadError(true);
     }
   }
 
@@ -145,15 +147,18 @@ export default function PodcastDetailScreen() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
+  async function handleRate(rating: number) {
+    const user = auth.currentUser;
+    const newRating = userRating === rating ? 0 : rating;
+    try {
+      await toggleRating(user?.uid || '', id, newRating);
+      setUserRating(newRating);
+    } catch {
+      console.warn('Failed to save rating');
+    }
   }
 
-  if (!podcast) {
+  if (!podcast && loadError) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Podcast not found</Text>
@@ -168,37 +173,66 @@ export default function PodcastDetailScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          {podcast.image_url ? (
-            <Image source={{ uri: podcast.image_url }} style={styles.coverImage} />
+          {!podcast ? (
+            <>
+              <View style={[styles.coverPlaceholder, { backgroundColor: '#1E293B' }]} />
+              <View style={[styles.skeletonBlock, { width: '60%', height: 24, marginTop: 8 }]} />
+              <View style={[styles.skeletonBlock, { width: '40%', height: 16, marginTop: 4 }]} />
+            </>
           ) : (
-            <View style={styles.coverPlaceholder}>
-              <Text style={styles.coverPlaceholderText}>
-                {podcast.title.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            <>
+              {podcast.image_url ? (
+                <Image source={{ uri: podcast.image_url }} style={styles.coverImage} />
+              ) : (
+                <View style={styles.coverPlaceholder}>
+                  <Text style={styles.coverPlaceholderText}>
+                    {podcast.title.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.podcastTitle}>{podcast.title}</Text>
+              <Text style={styles.podcastAuthor}>{podcast.author || 'Unknown'}</Text>
+              {podcast.description && (
+                <Text style={styles.description} numberOfLines={3}>{podcast.description}</Text>
+              )}
+              <TouchableOpacity
+                style={[styles.subscribeBtn, subscribed && styles.subscribedBtn]}
+                onPress={async () => {
+                  const user = auth.currentUser;
+                  try {
+                    await toggleSubscription(user?.uid || '', id, !subscribed);
+                    setSubscribed(!subscribed);
+                  } catch {
+                    console.warn('Failed to toggle subscription');
+                  }
+                }}
+              >
+                <Text style={[styles.subscribeBtnText, subscribed && styles.subscribedBtnText]}>
+                  {subscribed ? 'Subscribed' : 'Subscribe'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Rating Section */}
+              <View style={styles.ratingSection}>
+                <Text style={styles.ratingLabel}>Rate this podcast</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => handleRate(star)}>
+                      <Text style={[styles.star, star <= userRating && styles.starActive]}>
+                        {'\u2605'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </>
           )}
-          <Text style={styles.podcastTitle}>{podcast.title}</Text>
-          <Text style={styles.podcastAuthor}>{podcast.author || 'Unknown'}</Text>
-          {podcast.description && (
-            <Text style={styles.description} numberOfLines={3}>{podcast.description}</Text>
-          )}
-          <TouchableOpacity
-            style={[styles.subscribeBtn, subscribed && styles.subscribedBtn]}
-            onPress={async () => {
-              const user = auth.currentUser;
-              if (!user) { router.push('/(user)/auth'); return; }
-              await toggleSubscription(user.uid, id, !subscribed);
-              setSubscribed(!subscribed);
-            }}
-          >
-            <Text style={[styles.subscribeBtnText, subscribed && styles.subscribedBtnText]}>
-              {subscribed ? 'Subscribed' : 'Subscribe'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Episodes</Text>
-        {episodes.length === 0 ? (
+        {!podcast ? (
+          <Text style={styles.emptyText}>Loading episodes...</Text>
+        ) : episodes.length === 0 ? (
           <Text style={styles.emptyText}>No episodes yet.</Text>
         ) : (
           episodes.map((ep) => (
@@ -323,4 +357,10 @@ const styles = StyleSheet.create({
   },
   playPauseIcon: { fontSize: 20 },
   nowPlaying: { fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 8 },
+  ratingSection: { alignItems: 'center', gap: 8, marginTop: 16 },
+  ratingLabel: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
+  starsRow: { flexDirection: 'row', gap: 8 },
+  star: { fontSize: 32, color: '#334155' },
+  starActive: { color: '#FBBF24' },
+  skeletonBlock: { backgroundColor: '#1E293B', borderRadius: 6, alignSelf: 'center' },
 });

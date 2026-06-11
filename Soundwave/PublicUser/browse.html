@@ -274,6 +274,7 @@
     .empty-state svg { margin-bottom: 16px; }
     .empty-state p { font-size: 15px; font-weight: 500; }
   </style>
+  <script src="navigate.js"></script>
 </head>
 <body>
   <div class="loading-overlay" id="loadingOverlay">
@@ -292,7 +293,7 @@
       <span>SoundWave <small>Discovery</small></span>
     </div>
     <nav class="sidebar-nav">
-      <button class="nav-item" onclick="location.href='/home'">
+      <button class="nav-item" onclick="navigate('/home')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         Home
       </button>
@@ -300,19 +301,15 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         Discover
       </button>
-      <button class="nav-item" onclick="location.href='/library'">
+      <button class="nav-item" onclick="navigate('/library')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
         Library
       </button>
-      <button class="nav-item" onclick="location.href='/subscriptions'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 15 9-9M13 6h5v5"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg>
-        Subscriptions
-      </button>
-      <button class="nav-item" onclick="location.href='/history'">
+      <button class="nav-item" onclick="navigate('/history')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         History
       </button>
-      <button class="nav-item" onclick="location.href='/profile'">
+      <button class="nav-item" onclick="navigate('/profile')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </button>
@@ -339,7 +336,7 @@
       </div>
     </header>
 
-    <main class="content">
+    <main class="content" id="mainContent">
       <h1>Discover Podcasts</h1>
       <p class="subtitle">Explore trending shows, search by keyword, or browse categories.</p>
 
@@ -396,7 +393,7 @@
 
   <!-- Mobile Nav -->
   <nav class="mobile-nav">
-    <button class="mobile-nav-item" onclick="location.href='/home'">
+    <button class="mobile-nav-item" onclick="navigate('/home')">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Home
     </button>
@@ -404,11 +401,11 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       Explore
     </button>
-    <button class="mobile-nav-item" onclick="location.href='/library'">
+    <button class="mobile-nav-item" onclick="navigate('/library')">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
       Library
     </button>
-    <button class="mobile-nav-item" onclick="location.href='/history'">
+    <button class="mobile-nav-item" onclick="navigate('/history')">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       History
     </button>
@@ -431,9 +428,9 @@
     if (!user) { PUBLIC_API.logout(); return; }
     var initial = (user.display_name || user.email || 'U')[0].toUpperCase();
     document.getElementById('userAvatar').textContent = initial;
-    document.getElementById('loadingOverlay').classList.add('hidden');
+    var ov = document.getElementById('loadingOverlay'); if (ov) ov.classList.add('hidden');
     document.getElementById('signOutBtn').addEventListener('click', function() { PUBLIC_API.logout(); });
-    document.querySelector('.avatar')?.addEventListener('click', function() { location.href = '/profile'; });
+    document.querySelector('.avatar')?.addEventListener('click', function() { navigate('/profile'); });
 
     loadCategories();
     loadAllPodcasts();
@@ -506,7 +503,7 @@
     list.forEach(function(p) {
       var idx = (p.id || '').split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % gradients.length;
       container.innerHTML +=
-        '<div class="podcast-card" onclick="location.href=\'/podcast?id=' + encodeURIComponent(p.id) + '\'">' +
+        '<div class="podcast-card" onclick="navigate(\'/podcast?id=' + encodeURIComponent(p.id) + '\')">' +
           '<div class="podcast-cover"><div class="cover-bg" style="background:linear-gradient(135deg,' + gradients[idx] + ');">' +
             '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5">' +
               '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>' +
@@ -528,7 +525,7 @@
       var podcastTitle = (e.podcasts && e.podcasts.title) || '';
       var author = (e.podcasts && e.podcasts.author) || '';
       container.innerHTML +=
-        '<div class="episode-row" onclick="location.href=\'/podcast?id=' + encodeURIComponent(e.podcast_id) + '\'">' +
+        '<div class="episode-row" onclick="navigate(\'/podcast?id=' + encodeURIComponent(e.podcast_id) + '\')">' +
           '<div class="episode-thumb" style="background:linear-gradient(135deg,' + gradients[idx] + ');">' +
             '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>' +
           '</div>' +

@@ -1,46 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@/lib/firebase';
 import { getSubscriptions, toggleSubscription } from '@/lib/firestoreApi';
 
 export default function SubscriptionsScreen() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const user = auth.currentUser;
-      if (!user) { setLoading(false); return; }
-      const subIds = await getSubscriptions(user.uid);
-      if (subIds.length > 0) {
-        const { data } = await supabase
-          .from('podcasts')
-          .select('*')
-          .in('id', subIds);
-        setSubscriptions(data || []);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      async function load() {
+        const userId = auth.currentUser?.uid || '';
+        const subIds = await getSubscriptions(userId);
+        if (cancelled) return;
+        if (subIds.length > 0) {
+          const { data } = await supabase
+            .from('podcasts')
+            .select('*')
+            .in('id', subIds);
+          if (!cancelled) setSubscriptions(data || []);
+        }
       }
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#38BDF8" />
-      </View>
-    );
-  }
+      load();
+      return () => { cancelled = true; };
+    }, [])
+  );
 
   return (
     <ScrollView
