@@ -7,6 +7,33 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="auth.js"></script>
+  <style>
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+    .modal-overlay.active{display:flex}
+    .modal-box{background:#fff;border-radius:12px;padding:1.5rem;width:480px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+    .modal-box h3{margin:0 0 1rem;font-size:1.1rem}
+    .modal-close{float:right;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-gray);padding:0}
+    .modal-close:hover{color:var(--text-dark)}
+    .modal-box .form-group{margin-bottom:1rem}
+    .modal-box label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.3rem;color:var(--text-dark)}
+    .modal-box .form-control{width:100%;padding:0.6rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;box-sizing:border-box}
+    .modal-box textarea.form-control{min-height:80px;resize:vertical}
+    .modal-actions{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.5rem}
+    .cp-item{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid #f0f0f0}
+    .cp-item:last-child{border-bottom:none}
+    .cp-item .cp-info{display:flex;flex-direction:column}
+    .cp-item .cp-title{font-weight:600;font-size:0.9rem}
+    .cp-item .cp-author{font-size:0.8rem;color:var(--text-gray)}
+    .cp-remove{background:none;border:none;color:#ef4444;cursor:pointer;padding:0.25rem;font-size:0.9rem}
+    .cp-remove:hover{color:#dc2626}
+    .cp-search-wrap{margin-bottom:1rem;display:flex;gap:0.5rem}
+    .cp-search-wrap input{flex:1}
+    .cp-search-results{max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;display:none}
+    .cp-search-results.active{display:block}
+    .cp-result-item{padding:0.5rem 0.75rem;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:0.85rem}
+    .cp-result-item:hover{background:#f3f4f6}
+    .cp-result-item:last-child{border-bottom:none}
+  </style>
 </head>
 <body>
   <div class="dashboard-layout">
@@ -23,10 +50,10 @@
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
-        <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
+        <button class="btn-primary w-full" onclick="showCreateModal()"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
           <a href="#" class="bottom-link" id="signOutBtn">
             <i class="fa-solid fa-right-from-bracket"></i>
@@ -40,17 +67,16 @@
       <header class="topbar">
         <div class="search-bar input-wrapper">
           <i class="fa-solid fa-magnifying-glass input-icon"></i>
-          <input type="text" class="form-control" placeholder="Search collections...">
+          <input type="text" class="form-control" id="searchInput" placeholder="Search collections...">
         </div>
         <div class="topbar-actions">
-          <button class="export-btn">EXPORT CSV</button>
-          <button class="btn-primary">Publish Changes</button>
           <div class="notification">
             <i class="fa-regular fa-bell"></i>
             <div class="notification-dot"></div>
           </div>
-          <div class="user-profile">
-            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          <div class="user-profile" id="sidebarUser" style="display:none">
+            <span id="sidebarEmail" style="font-size:0.85rem;margin-right:0.5rem"></span>
+            <span id="sidebarRole" class="badge badge-blue" style="font-size:0.7rem"></span>
           </div>
         </div>
       </header>
@@ -61,10 +87,6 @@
             <h2 class="page-title">Collections Manager</h2>
             <p class="page-subtitle">Curate and manage thematic podcast lists for distributors.</p>
           </div>
-          <div style="display:flex;gap:0.5rem">
-            <button class="view-btn-icon active"><i class="fa-solid fa-table-cells-large"></i></button>
-            <button class="view-btn-icon"><i class="fa-solid fa-list"></i></button>
-          </div>
         </div>
 
         <!-- Stats Row -->
@@ -72,110 +94,319 @@
           <div class="cstat">
             <div class="cstat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-layer-group"></i></div>
             <div>
-              <div class="cstat-val">0</div>
+              <div class="cstat-val" id="statTotal">0</div>
               <div class="cstat-label">TOTAL COLLECTIONS</div>
             </div>
           </div>
           <div class="cstat">
             <div class="cstat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div>
             <div>
-              <div class="cstat-val">0</div>
-              <div class="cstat-label">TOTAL PODCASTS</div>
+              <div class="cstat-val" id="statPodcasts">0</div>
+              <div class="cstat-label">TOTAL PODCASTS IN COLLECTIONS</div>
             </div>
           </div>
         </div>
 
         <!-- Collection Grid -->
-        <div class="collections-grid">
+        <div class="collections-grid" id="collectionsGrid">
           <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-gray)"><i class="fa-solid fa-spinner fa-spin"></i> Loading collections...</div>
         </div>
-
-        <div class="pagination" style="margin-top:1.5rem">
-          <div class="page-info">Showing 1–5 of 42 collections</div>
-          <div class="page-controls">
-            <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
-            <button class="page-btn active">1</button>
-            <button class="page-btn">2</button>
-            <button class="page-btn">3</button>
-            <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
-          </div>
-        </div>
-
-        <div class="system-toast"><i class="fa-solid fa-rotate"></i> System syncing 12 active streams...</div>
       </div>
     </main>
   </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" id="formModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('formModal')">&times;</button>
+      <h3 id="formModalTitle">Create New Collection</h3>
+      <div class="form-group">
+        <label>Collection Name *</label>
+        <input type="text" class="form-control" id="formName" placeholder="e.g., Featured Tech Podcasts">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" id="formDesc" placeholder="Brief description of this collection"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Cover Image URL</label>
+        <input type="text" class="form-control" id="formImage" placeholder="https://example.com/image.jpg">
+      </div>
+      <div class="form-group">
+        <label><input type="checkbox" id="formPublic" checked> Public collection</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('formModal')">Cancel</button>
+        <button class="btn-primary" id="formSubmitBtn" onclick="saveCollection()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Modal -->
+  <div class="modal-overlay" id="manageModal">
+    <div class="modal-box" style="width:560px">
+      <button class="modal-close" onclick="closeModal('manageModal')">&times;</button>
+      <h3 id="manageModalTitle">Manage Collection</h3>
+      <div class="cp-search-wrap">
+        <input type="text" class="form-control" id="addPodcastInput" placeholder="Search podcasts to add...">
+        <button class="btn-primary" onclick="openManagePodcastSearch()" style="white-space:nowrap"><i class="fa-solid fa-plus"></i> Add</button>
+      </div>
+      <div class="cp-search-results" id="addPodcastResults"></div>
+      <div id="managePodcastList">
+        <div style="text-align:center;padding:2rem;color:var(--text-gray)">Loading...</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('manageModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-(function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+(\d+)/);if(!m)return;var tot=parseInt(m[3]),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
-</script>
-  <script>
-requireAuth();
 (function() {
-  const user = EDITOR_API.getUser();
-  if (user) {
-    document.getElementById('sidebarEmail').textContent = user.email;
-    document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+  const email = localStorage.getItem('editor_email');
+  const role = localStorage.getItem('editor_role');
+  if (email) {
+    document.getElementById('sidebarEmail').textContent = email;
+    document.getElementById('sidebarRole').textContent = role || 'Editor';
     document.getElementById('sidebarUser').style.display = 'block';
   }
 })();
-</script>
-<script>
-(function() {
-  // ---- LOAD COLLECTIONS ----
-  const grid = document.querySelector('.collections-grid');
-  const statVals = document.querySelectorAll('.cstat-val');
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ── API helper ──
+const API = {
+  token() { return localStorage.getItem('editor_token'); },
+  async get(path) {
+    const r = await fetch(path, { headers: { 'Authorization': 'Bearer ' + this.token() } });
+    if (r.status === 401) { window.location.href = '/'; return null; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    return r.json();
+  },
+  async post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token(), 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    if (r.status === 401) { window.location.href = '/'; return null; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    return r.json();
+  },
+  async put(path, body) {
+    const r = await fetch(path, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + this.token(), 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    if (r.status === 401) { window.location.href = '/'; return null; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    return r.json();
+  },
+  async del(path) {
+    const r = await fetch(path, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + this.token() } });
+    if (r.status === 401) { window.location.href = '/'; return null; }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    return r.json();
   }
+};
 
-  function timeAgo(dateStr) {
-    if (!dateStr) return '\u2014';
-    const now = new Date();
-    const d = new Date(dateStr);
-    const diff = Math.floor((now - d) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+// ── Escaping ──
+function esc(str) { if (!str) return ''; var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '\u2014';
+  var diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ── Modal helpers ──
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
+});
+
+// ── Create modal ──
+var editingId = null;
+
+function showCreateModal() {
+  editingId = null;
+  document.getElementById('formModalTitle').textContent = 'Create New Collection';
+  document.getElementById('formSubmitBtn').textContent = 'Create';
+  document.getElementById('formName').value = '';
+  document.getElementById('formDesc').value = '';
+  document.getElementById('formImage').value = '';
+  document.getElementById('formPublic').checked = true;
+  showModal('formModal');
+}
+
+function showEditModal(col) {
+  editingId = col.id;
+  document.getElementById('formModalTitle').textContent = 'Edit Collection';
+  document.getElementById('formSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('formName').value = col.name || '';
+  document.getElementById('formDesc').value = col.description || '';
+  document.getElementById('formImage').value = col.cover_image_url || '';
+  document.getElementById('formPublic').checked = col.is_public !== false;
+  showModal('formModal');
+}
+
+async function saveCollection() {
+  var name = document.getElementById('formName').value.trim();
+  if (!name) { alert('Collection name is required'); return; }
+  var body = {
+    name: name,
+    description: document.getElementById('formDesc').value.trim(),
+    cover_image_url: document.getElementById('formImage').value.trim() || null,
+    is_public: document.getElementById('formPublic').checked
+  };
+  try {
+    if (editingId) {
+      await API.put('/api/collections/' + editingId, body);
+    } else {
+      await API.post('/api/collections', body);
+    }
+    closeModal('formModal');
+    loadCollections();
+  } catch (e) { alert('Failed: ' + e.message); }
+}
+
+async function deleteCollection(id, name) {
+  if (!confirm('Delete collection "' + (name || '') + '"? This will remove all podcast associations.')) return;
+  try {
+    await API.del('/api/collections/' + id);
+    loadCollections();
+  } catch (e) { alert('Failed to delete: ' + e.message); }
+}
+
+// ── Manage modal ──
+var manageCollectionId = null;
+var manageCollectionName = '';
+
+function showManageModal(id, name) {
+  manageCollectionId = id;
+  manageCollectionName = name;
+  document.getElementById('manageModalTitle').textContent = 'Manage: ' + esc(name);
+  document.getElementById('addPodcastInput').value = '';
+  document.getElementById('addPodcastResults').classList.remove('active');
+  document.getElementById('addPodcastResults').innerHTML = '';
+  showModal('manageModal');
+  loadManagePodcasts();
+}
+
+async function loadManagePodcasts() {
+  var container = document.getElementById('managePodcastList');
+  try {
+    var data = await API.get('/api/collections/' + manageCollectionId + '/podcasts');
+    if (data === null) return;
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-gray)">No podcasts in this collection yet. Use the search above to add some.</div>';
+      return;
+    }
+    container.innerHTML = data.map(function(p) {
+      return '<div class="cp-item"><div class="cp-info"><span class="cp-title">' + esc(p.title) + '</span><span class="cp-author">' + esc(p.author || '') + '</span></div><button class="cp-remove" onclick="removeFromCollection(\'' + p.id + '\')" title="Remove"><i class="fa-solid fa-xmark"></i></button></div>';
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load: ' + esc(e.message) + '</div>';
   }
+}
 
-  function createCard(col) {
-    const name = escapeHtml(col.title || col.name || 'Untitled');
-    const desc = escapeHtml(col.description || '') || 'No description';
-    const pc = col.podcast_count || 0;
-    const updated = timeAgo(col.updated_at || col.created_at);
-    const img = 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop';
-    return '<div class="collection-card"><div class="cc-thumb"><img src="' + img + '" alt="' + name + '"></div><div class="cc-body"><div class="cc-header"><span class="cc-title">' + name + '</span><button class="cc-menu"><i class="fa-solid fa-ellipsis-vertical"></i></button></div><p class="cc-desc">' + desc.substring(0, 80) + (desc.length > 80 ? '...' : '') + '</p><div class="cc-footer"><span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> ' + pc + ' Podcasts</span><span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated ' + updated + '</span></div><div class="cc-actions"><button class="cc-action-btn" style="color:var(--primary-blue)"><i class="fa-solid fa-pen"></i></button><button class="cc-action-btn"><i class="fa-solid fa-trash"></i></button><a href="#" class="cc-manage">Manage \u2192</a></div></div></div>';
+async function removeFromCollection(podcastId) {
+  try {
+    await API.del('/api/collections/' + manageCollectionId + '/podcasts/' + podcastId);
+    loadManagePodcasts();
+  } catch (e) { alert('Failed to remove: ' + e.message); }
+}
+
+// Add podcast search
+var addPodcastTimer;
+document.getElementById('addPodcastInput').addEventListener('input', function() {
+  clearTimeout(addPodcastTimer);
+  var val = this.value.trim();
+  if (val.length < 2) { document.getElementById('addPodcastResults').classList.remove('active'); return; }
+  addPodcastTimer = setTimeout(function() { searchPodcastsToAdd(val); }, 300);
+});
+
+async function searchPodcastsToAdd(query) {
+  var resultsEl = document.getElementById('addPodcastResults');
+  try {
+    var data = await API.get('/api/editor/podcasts?search=' + encodeURIComponent(query) + '&limit=10');
+    if (data === null) return;
+    var items = data.items || [];
+    if (items.length === 0) {
+      resultsEl.innerHTML = '<div style="padding:0.75rem;color:var(--text-gray);font-size:0.85rem">No podcasts found</div>';
+    } else {
+      resultsEl.innerHTML = items.map(function(p) {
+        return '<div class="cp-result-item" onclick="addPodcastToCollection(\'' + p.id + '\', \'' + esc(p.title).replace(/'/g, "\\'") + '\')"><strong>' + esc(p.title) + '</strong> ' + (p.author ? '&middot; ' + esc(p.author) : '') + '</div>';
+      }).join('');
+    }
+    resultsEl.classList.add('active');
+  } catch (e) { resultsEl.innerHTML = '<div style="padding:0.75rem;color:var(--error-text)">Error: ' + esc(e.message) + '</div>'; resultsEl.classList.add('active'); }
+}
+
+async function addPodcastToCollection(podcastId, title) {
+  try {
+    await API.post('/api/collections/' + manageCollectionId + '/podcasts', { podcast_id: podcastId });
+    document.getElementById('addPodcastInput').value = '';
+    document.getElementById('addPodcastResults').classList.remove('active');
+    loadManagePodcasts();
+  } catch (e) { alert('Failed to add: ' + e.message); }
+}
+
+function openManagePodcastSearch() {
+  var val = document.getElementById('addPodcastInput').value.trim();
+  if (val.length >= 2) searchPodcastsToAdd(val);
+}
+
+// ── Load collections ──
+async function loadCollections() {
+  var grid = document.getElementById('collectionsGrid');
+  try {
+    var data = await API.get('/api/collections');
+    if (data === null) return;
+    var items = data.items || [];
+    var stats = data.stats || {};
+
+    document.getElementById('statTotal').textContent = stats.total || items.length || 0;
+    var totalPodcasts = items.reduce(function(sum, c) { return sum + (c.podcast_count || 0); }, 0);
+    document.getElementById('statPodcasts').textContent = totalPodcasts;
+
+    if (items.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-gray)"><i class="fa-solid fa-layer-group" style="font-size:2rem;margin-bottom:1rem;display:block"></i>No collections yet. Click "Create New Collection" to get started.</div>' +
+        '<div class="collection-card collection-card-new" onclick="showCreateModal()"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
+      return;
+    }
+
+    var cardsHtml = items.map(function(col) {
+      var name = esc(col.title || col.name || 'Untitled');
+      var desc = esc(col.description || '') || 'No description';
+      var pc = col.podcast_count || 0;
+      var updated = timeAgo(col.updated_at || col.created_at);
+      var img = col.cover_image_url || 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop';
+      return '<div class="collection-card"><div class="cc-thumb"><img src="' + img + '" alt="' + name + '" onerror="this.src=\'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=150&fit=crop\'"></div><div class="cc-body"><div class="cc-header"><span class="cc-title">' + name + '</span></div><p class="cc-desc">' + desc.substring(0, 80) + (desc.length > 80 ? '...' : '') + '</p><div class="cc-footer"><span><i class="fa-solid fa-microphone" style="color:var(--text-light)"></i> ' + pc + ' Podcasts</span><span><i class="fa-regular fa-clock" style="color:var(--text-light)"></i> Updated ' + updated + '</span></div><div class="cc-actions"><button class="cc-action-btn" style="color:var(--primary-blue)" onclick="showEditModal(' + JSON.stringify(col).replace(/"/g, '&quot;') + ')" title="Edit"><i class="fa-solid fa-pen"></i></button><button class="cc-action-btn" onclick="deleteCollection(\'' + col.id + '\',\'' + name.replace(/'/g, "\\'") + '\')" title="Delete"><i class="fa-solid fa-trash"></i></button><a href="#" class="cc-manage" onclick="event.preventDefault();showManageModal(\'' + col.id + '\',\'' + name.replace(/'/g, "\\'") + '\')">Manage &rarr;</a></div></div></div>';
+    }).join('');
+
+    var newCard = '<div class="collection-card collection-card-new" onclick="showCreateModal()"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
+    grid.innerHTML = cardsHtml + newCard;
+  } catch (e) {
+    console.error('Failed to load collections:', e);
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--error-text)">Failed to load collections: ' + esc(e.message) + '</div>' +
+      '<div class="collection-card collection-card-new" onclick="showCreateModal()"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
   }
+}
 
-  EDITOR_API.get('/api/collections')
-    .then(data => {
-      const items = data.items || data || [];
-      const stats = data.stats || {};
-
-      if (statVals[0]) statVals[0].textContent = stats.total || items.length || 0;
-      const totalPodcasts = items.reduce((sum, c) => sum + (c.podcast_count || 0), 0);
-      if (statVals[1]) statVals[1].textContent = totalPodcasts || stats.totalEpisodes || 0;
-
-      const cardsHtml = items.map(createCard).join('');
-      const newCard = '<div class="collection-card collection-card-new" onclick="alert(\'Create new collection\')"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
-      grid.innerHTML = cardsHtml + newCard;
-
-      const pageInfo = document.querySelector('.page-info');
-      if (pageInfo) {
-        const total = stats.total || items.length;
-        pageInfo.innerHTML = 'Showing 1\u2013' + items.length + ' of ' + total + ' collections';
-      }
-    })
-    .catch(err => {
-      console.error('Failed to load collections:', err);
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--error-text)">Failed to load collections</div>' +
-        '<div class="collection-card collection-card-new" onclick="alert(\'Create new collection\')"><div class="cc-new-content"><div class="cc-new-icon"><i class="fa-solid fa-plus"></i></div><div class="cc-new-title">Create New Collection</div><div class="cc-new-desc">Get a new related series with filtered podcast feeds.</div></div></div>';
+// ── Search collections ──
+var searchTimer;
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  var val = this.value.trim().toLowerCase();
+  searchTimer = setTimeout(function() {
+    var cards = document.querySelectorAll('#collectionsGrid > .collection-card');
+    cards.forEach(function(c) {
+      if (c.classList.contains('collection-card-new')) return;
+      var title = (c.querySelector('.cc-title') || {}).textContent || '';
+      c.style.display = title.toLowerCase().indexOf(val) === -1 ? 'none' : '';
     });
-})();
+  }, 200);
+});
+
+// ── Init ──
+loadCollections();
 </script>
 </body>
 </html>

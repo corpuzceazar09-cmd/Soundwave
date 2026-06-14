@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, usePathname } from 'expo-router';
-import { useAuth, isMockMode } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import { EditorThemeProvider, useEditorTheme } from '@/contexts/EditorThemeContext';
 
 type NavItem = {
@@ -42,11 +42,6 @@ function EditorLayoutInner() {
 
   useEffect(() => {
     if (loading) return;
-
-    if (isMockMode()) {
-      setChecking(false);
-      return;
-    }
 
     if (role !== 'Editor' && role !== 'Admin') {
       router.replace('/');

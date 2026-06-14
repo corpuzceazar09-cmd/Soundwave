@@ -7,8 +7,69 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult, query } = require('express-validator');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const Parser = require('rss-parser');
 const { supabase, testConnection } = require('./db');
+const { URL } = require('url');
+const net = require('net');
+
+// ── SSRF Protection: block private/internal IP ranges ──
+const PRIVATE_CIDRS = [
+  '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16',
+  '127.0.0.0/8', '169.254.0.0/16', '0.0.0.0/8',
+  '::1/128', 'fc00::/7', 'fe80::/10',
+];
+
+function ipToLong(ip) {
+  return ip.split('.').reduce(function(acc, octet) { return (acc << 8) + parseInt(octet, 10); }, 0) >>> 0;
+}
+
+function isPrivateIP(ip) {
+  if (net.isIPv6(ip)) {
+    // Simple IPv6 private check
+    if (ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) return true;
+    return false;
+  }
+  const ipNum = ipToLong(ip);
+  for (const cidr of PRIVATE_CIDRS) {
+    const [range, bits] = cidr.split('/');
+    const mask = ~(2 ** (32 - parseInt(bits, 10)) - 1);
+    if ((ipNum & mask) === (ipToLong(range) & mask)) return true;
+  }
+  return false;
+}
+
+function validateURL(inputUrl) {
+  let parsed;
+  try {
+    parsed = new URL(inputUrl);
+  } catch {
+    throw new Error('Invalid URL format');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Only http and https URLs are allowed');
+  }
+  // Resolve hostname to IPs and check against private ranges
+  const { Resolver } = require('dns').promises;
+  const resolver = new Resolver();
+  return resolver.resolve4(parsed.hostname).then(function(addresses) {
+    for (const addr of addresses) {
+      if (isPrivateIP(addr)) {
+        throw new Error('Access to internal/private network addresses is blocked');
+      }
+    }
+    return parsed;
+  }).catch(function(dnsErr) {
+    // If DNS resolution fails, try to check if it's a raw IP
+    if (net.isIP(parsed.hostname)) {
+      if (isPrivateIP(parsed.hostname)) {
+        throw new Error('Access to internal/private network addresses is blocked');
+      }
+      return parsed;
+    }
+    throw new Error('Could not resolve host: ' + dnsErr.message);
+  });
+}
 
 const rssParser = new Parser({
   timeout: 30000,
@@ -26,6 +87,32 @@ const PORT = process.env.PORT || 3002;
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
   console.error('❌ Missing required env vars: ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET');
   process.exit(1);
+}
+
+// Hash admin password with bcrypt on startup (12 rounds)
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 12);
+
+// ---------------------------------------------------------------------------
+// JWT Token Blacklist (in-memory, for server-side logout)
+// ---------------------------------------------------------------------------
+const tokenBlacklist = new Set();
+// Periodically purge expired tokens from the blacklist (every 15 minutes)
+const BLACKLIST_CLEANUP_INTERVAL = 15 * 60 * 1000;
+setInterval(() => {
+  tokenBlacklist.clear();
+}, BLACKLIST_CLEANUP_INTERVAL);
+
+function isTokenBlacklisted(jwtToken) {
+  // Store a short hash of the token to avoid holding the full token in memory
+  const crypto = require('crypto');
+  const tokenHash = crypto.createHash('sha256').update(jwtToken).digest('hex').slice(0, 16);
+  return tokenBlacklist.has(tokenHash);
+}
+
+function blacklistToken(jwtToken) {
+  const crypto = require('crypto');
+  const tokenHash = crypto.createHash('sha256').update(jwtToken).digest('hex').slice(0, 16);
+  tokenBlacklist.add(tokenHash);
 }
 
 const app = express();
@@ -49,23 +136,34 @@ app.use(helmet({
     },
   },
 }));
+// Derive the default origin from PORT so start.bat overrides are handled automatically
+const defaultOrigin = `http://localhost:${process.env.PORT || 3002}`;
+const corsOrigin = process.env.CORS_ORIGIN || defaultOrigin;
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3002',
+  origin: corsOrigin,
   credentials: true,
 }));
 
-// CSRF protection — origin header check for state-changing requests
-// Browsers always send Origin on cross-origin requests; we verify it matches
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3002';
+// CSRF protection — origin header exact-match check for state-changing requests
+// Browsers always send Origin on cross-origin requests; we verify it matches exactly
+const ALLOWED_ORIGIN = corsOrigin;
 app.use((req, res, next) => {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    if (origin && !origin.startsWith(ALLOWED_ORIGIN)) {
+    if (origin && origin !== ALLOWED_ORIGIN) {
       return res.status(403).json({ error: 'CSRF validation failed' });
     }
-    if (!origin && referer && !referer.startsWith(ALLOWED_ORIGIN)) {
-      return res.status(403).json({ error: 'CSRF validation failed' });
+    if (!origin && referer) {
+      try {
+        const parsed = new URL(referer);
+        if (parsed.origin !== ALLOWED_ORIGIN) {
+          return res.status(403).json({ error: 'CSRF validation failed' });
+        }
+      } catch {
+        return res.status(403).json({ error: 'CSRF validation failed' });
+      }
     }
   }
   next();
@@ -96,7 +194,7 @@ app.use('/api/', apiLimiter);
 // Helpers
 // ---------------------------------------------------------------------------
 function generateToken(email) {
-  return jwt.sign({ email, role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign({ email, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
 }
 
 function authMiddleware(req, res, next) {
@@ -105,13 +203,27 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ error: 'No token provided' });
   }
   try {
-    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+    const token = header.split(' ')[1];
+    // Check if token has been blacklisted (logged out)
+    if (isTokenBlacklisted(token)) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    req.token = token; // store for potential logout
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+// POST /api/admin/logout — blacklist the current token
+app.post('/api/admin/logout', authMiddleware, (req, res) => {
+  if (req.token) {
+    blacklistToken(req.token);
+  }
+  return res.json({ success: true, message: 'Logged out successfully' });
+});
 
 // ---------------------------------------------------------------------------
 // RSS Ingestion Engine
@@ -134,6 +246,8 @@ async function ingestFeed(feedId, rssUrl) {
   if (jobErr) throw new Error(`Failed to create job: ${jobErr.message}`);
 
   try {
+    // SSRF protection: validate URL before fetching
+    await validateURL(rssUrl);
     const feed = await rssParser.parseURL(rssUrl);
     const feedTitle = feed.title || feed.description || rssUrl;
     const feedDesc = feed.description || null;
@@ -184,11 +298,26 @@ async function ingestFeed(feedId, rssUrl) {
       if (!audioUrl) continue;
 
       const pubDate = item.pubDate ? new Date(item.pubDate).toISOString() : null;
+      const title = item.title || 'Untitled';
 
-      const { error: epErr } = await supabase.from('episodes').upsert(
-        {
+      // Check if this episode already exists (dedup)
+      const { data: existing } = await supabase
+        .from('episodes')
+        .select('id')
+        .eq('podcast_id', podcastId)
+        .eq('title', title)
+        .maybeSingle();
+
+      if (existing) {
+        processed++;
+        continue;
+      }
+
+      const { error: epErr } = await supabase
+        .from('episodes')
+        .insert({
           podcast_id: podcastId,
-          title: item.title || 'Untitled',
+          title: title,
           description: item.contentSnippet || item.content || null,
           audio_url: audioUrl,
           duration: item.itunes?.duration
@@ -197,12 +326,14 @@ async function ingestFeed(feedId, rssUrl) {
               : parseDuration(item.itunes.duration))
             : null,
           published_at: pubDate,
-          status: 'published',
-        },
-        { onConflict: 'podcast_id, title', ignoreDuplicates: true }
-      );
+          status: 'draft',
+        });
 
-      if (!epErr) processed++;
+      if (epErr) {
+        console.error(`[INGEST] Upsert failed for "${item.title}":`, epErr.message);
+      } else {
+        processed++;
+      }
     }
 
     // Update job as success
@@ -267,9 +398,9 @@ app.post('/api/admin/login',
 
       const { email, password } = req.body;
 
-      // Constant-time comparison to prevent timing attacks
+      // Compare against bcrypt hash (set on startup)
       const emailMatch = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      const passMatch = password === ADMIN_PASSWORD;
+      const passMatch = bcrypt.compareSync(password, ADMIN_PASSWORD_HASH);
 
       if (!emailMatch || !passMatch) {
         return res.status(401).json({ error: 'Invalid email or password' });
@@ -296,18 +427,19 @@ app.post('/api/admin/verify', authMiddleware, (req, res) => {
 // GET /api/admin/stats
 app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
-    const [podcasts, episodes, feeds, failedJobs] = await Promise.all([
+    const [podcasts, episodes, feeds, failedIngestions, failedFeeds] = await Promise.all([
       supabase.from('podcasts').select('id', { count: 'exact', head: true }),
       supabase.from('episodes').select('id', { count: 'exact', head: true }),
       supabase.from('feeds').select('status'),
       supabase.from('ingestion_jobs').select('id', { count: 'exact', head: true }).eq('status', 'error'),
+      supabase.from('feeds').select('id', { count: 'exact', head: true }).eq('status', 'error'),
     ]);
 
     const feedList = feeds.data || [];
     return res.json({
       totalPodcasts: podcasts.count ?? 0,
       totalEpisodes: episodes.count ?? 0,
-      failedJobs: failedJobs.count ?? 0,
+      failedJobs: (failedIngestions.count ?? 0) + (failedFeeds.count ?? 0),
       activeFeeds: feedList.filter(f => f.status === 'active').length,
       pendingFeeds: feedList.filter(f => f.status === 'pending').length,
     });
@@ -459,9 +591,16 @@ app.post('/api/admin/feeds/add',
         return res.status(400).json({ error: errors.array()[0].msg });
       }
 
-      const { url, name, category } = req.body;
+  const { url, name, category } = req.body;
 
-      const { data, error } = await supabase
+  // SSRF protection: validate the feed URL before storing
+  try {
+    await validateURL(url);
+  } catch (valErr) {
+    return res.status(400).json({ error: valErr.message });
+  }
+
+  const { data, error } = await supabase
         .from('feeds')
         .insert({
           rss_url: url,
@@ -588,6 +727,85 @@ app.post('/api/admin/failed/dismiss/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/admin/failed/ingestion/retry/:id — retry a failed ingestion job by re-fetching its feed
+app.post('/api/admin/failed/ingestion/retry/:id', authMiddleware, async (req, res) => {
+  try {
+    // Get the ingestion job to find its feed_id
+    const { data: job, error: findErr } = await supabase
+      .from('ingestion_jobs')
+      .select('feed_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (findErr || !job) {
+      return res.status(404).json({ error: 'Ingestion job not found' });
+    }
+
+    // Reset the associated feed to pending
+    const { error: updateErr } = await supabase
+      .from('feeds')
+      .update({ status: 'pending', error_message: null })
+      .eq('id', job.feed_id);
+
+    if (updateErr) throw updateErr;
+    return res.json({ success: true, message: `Feed ${job.feed_id} reset to pending for ingestion job ${req.params.id}` });
+  } catch (err) {
+    console.error('Ingestion retry error:', err);
+    return res.status(500).json({ error: 'Failed to retry ingestion job' });
+  }
+});
+
+// POST /api/admin/failed/ingestion/retry-all — retry all failed ingestion jobs
+app.post('/api/admin/failed/ingestion/retry-all', authMiddleware, async (req, res) => {
+  try {
+    // Get all failed ingestion jobs with their feed_ids
+    const { data: jobs, error: findErr } = await supabase
+      .from('ingestion_jobs')
+      .select('feed_id')
+      .eq('status', 'failed');
+
+    if (findErr) throw findErr;
+    if (!jobs || jobs.length === 0) {
+      return res.json({ success: true, message: 'No failed ingestion jobs to retry' });
+    }
+
+    // Get unique feed_ids
+    const feedIds = [...new Set(jobs.map(j => j.feed_id).filter(Boolean))];
+
+    if (feedIds.length === 0) {
+      return res.json({ success: true, message: 'No feeds associated with failed jobs' });
+    }
+
+    // Reset all associated feeds to pending
+    const { error: updateErr } = await supabase
+      .from('feeds')
+      .update({ status: 'pending', error_message: null })
+      .in('id', feedIds);
+
+    if (updateErr) throw updateErr;
+    return res.json({ success: true, message: `${feedIds.length} feeds reset to pending for ${jobs.length} failed ingestion jobs` });
+  } catch (err) {
+    console.error('Ingestion retry-all error:', err);
+    return res.status(500).json({ error: 'Failed to retry all ingestion jobs' });
+  }
+});
+
+// POST /api/admin/failed/ingestion/dismiss/:id — dismiss a failed ingestion job
+app.post('/api/admin/failed/ingestion/dismiss/:id', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('ingestion_jobs')
+      .update({ error_message: null })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    return res.json({ success: true, message: `Ingestion job ${req.params.id} dismissed` });
+  } catch (err) {
+    console.error('Ingestion dismiss error:', err);
+    return res.status(500).json({ error: 'Failed to dismiss ingestion job' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Ingestion Logs
 // ---------------------------------------------------------------------------
@@ -629,20 +847,34 @@ app.get('/api/admin/ingestion-logs', authMiddleware, async (req, res) => {
 // GET /api/admin/podcasts
 app.get('/api/admin/podcasts', authMiddleware, async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data: podcastsData, error: podcastsError } = await supabase
       .from('podcasts')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (podcastsError) throw podcastsError;
 
-    const podcasts = (data || []).map(p => ({
+    // Count episodes per podcast using lightweight count queries
+    const podcastIds = (podcastsData || []).map(p => p.id);
+    const countPromises = podcastIds.map(id =>
+      supabase.from('episodes').select('*', { count: 'exact', head: true }).eq('podcast_id', id)
+    );
+    const countResults = await Promise.all(countPromises);
+
+    const episodeCounts = {};
+    countResults.forEach((result, i) => {
+      if (!result.error && podcastIds[i]) {
+        episodeCounts[podcastIds[i]] = result.count || 0;
+      }
+    });
+
+    const podcasts = (podcastsData || []).map(p => ({
       id: p.id,
       name: p.title,
       author: p.author || 'Unknown',
       cover_url: p.image_url,
       category: 'Podcast',
-      episodes: 0,
+      episodes: episodeCounts[p.id] || 0,
       last_updated: p.updated_at ? p.updated_at.split('T')[0] : null,
     }));
 

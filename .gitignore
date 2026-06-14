@@ -10,6 +10,9 @@ thoughts/
 # Node dependencies
 node_modules/
 
+# Credentials
+email.txt
+
 # Environment files
 .env
 .env*.local

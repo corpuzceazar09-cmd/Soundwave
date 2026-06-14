@@ -23,7 +23,7 @@
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
         <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
@@ -207,31 +207,33 @@ requireAuth();
   }
 
   function createTableRow(item) {
-    const s = item.status || 'pending';
-    const sc = s === 'pending' ? 'badge-gray' : s === 'accepted' ? 'badge-green' : 'badge-blue';
-    const sl = s.charAt(0).toUpperCase() + s.slice(1);
-    const title = escapeHtml(item.episodes?.title || item.title || 'Untitled');
-    const pub = escapeHtml(item.episodes?.podcasts?.publisher || item.publisher || '\u2014');
-    const rss = item.episodes?.podcasts?.rss_feed || item.rss_feed || '';
-    const date = formatDate(item.created_at || item.ingested_date);
+    const status = item.status || 'draft';
+    const isPub = status === 'published';
+    const sc = isPub ? 'badge-green' : 'badge-gray';
+    const sl = isPub ? 'Published' : 'Draft';
+    const title = escapeHtml(item.title || 'Untitled');
+    const pub = escapeHtml(item.podcasts?.title || item.podcasts?.author || '\u2014');
+    const rss = item.podcasts?.feed_url || '';
+    const date = formatDate(item.created_at || item.published_at);
     return '<tr>' +
       '<td><div class="podcast-info"><div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div><div><div class="podcast-title">' + title + '</div><div class="podcast-publisher">' + pub + '</div></div></div></td>' +
       '<td><a href="#" class="rss-link"><i class="fa-solid fa-rss"></i>' + escapeHtml(rss.substring(0, 40)) + '...</a></td>' +
       '<td><div class="date-cell">' + date + '</div></td>' +
       '<td><span class="badge ' + sc + '"><span class="badge-dot"></span> ' + sl + '</span></td>' +
-      '<td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="window.location=\'/rich-editor\'">Review</button></td>' +
+      '<td><button class="btn-primary" style="padding:0.4rem 1.25rem;font-size:0.8rem" onclick="editEpisode(\'' + item.id + '\')">Review</button></td>' +
       '</tr>';
   }
 
   function createGridCard(item) {
-    const s = item.status || 'pending';
-    const sc = s === 'pending' ? 'badge-gray' : s === 'accepted' ? 'badge-green' : 'badge-blue';
-    const sl = s.charAt(0).toUpperCase() + s.slice(1);
-    const title = escapeHtml(item.episodes?.title || item.title || 'Untitled');
-    const pub = escapeHtml(item.episodes?.podcasts?.publisher || item.publisher || '\u2014');
-    const rss = item.episodes?.podcasts?.rss_feed || item.rss_feed || '';
-    const date = formatDate(item.created_at || item.ingested_date);
-    return '<div class="rg-card"><div class="rg-top"><div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div><div class="rg-badge"><span class="badge ' + sc + '"><span class="badge-dot"></span> ' + sl + '</span></div></div><div class="rg-title">' + title + '</div><div class="rg-pub">' + pub + '</div><div class="rg-rss"><i class="fa-solid fa-rss"></i> ' + escapeHtml(rss.substring(0, 35)) + '...</div><div class="rg-date">' + date + '</div><button class="btn-primary" style="width:100%;padding:0.5rem" onclick="window.location=\'/rich-editor\'">Review</button></div>';
+    const status = item.status || 'draft';
+    const isPub = status === 'published';
+    const sc = isPub ? 'badge-green' : 'badge-gray';
+    const sl = isPub ? 'Published' : 'Draft';
+    const title = escapeHtml(item.title || 'Untitled');
+    const pub = escapeHtml(item.podcasts?.title || item.podcasts?.author || '\u2014');
+    const rss = item.podcasts?.feed_url || '';
+    const date = formatDate(item.created_at || item.published_at);
+    return '<div class="rg-card"><div class="rg-top"><div class="pod-icon" style="background:#0f172a;color:#38bdf8"><i class="fa-solid fa-microphone-lines"></i></div><div class="rg-badge"><span class="badge ' + sc + '"><span class="badge-dot"></span> ' + sl + '</span></div></div><div class="rg-title">' + title + '</div><div class="rg-pub">' + pub + '</div><div class="rg-rss"><i class="fa-solid fa-rss"></i> ' + escapeHtml(rss.substring(0, 35)) + '...</div><div class="rg-date">' + date + '</div><button class="btn-primary" style="width:100%;padding:0.5rem" onclick="editEpisode(\'' + item.id + '\')">Review</button></div>';
   }
 
   EDITOR_API.get('/api/review-queue')
@@ -254,6 +256,12 @@ requireAuth();
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load review queue</td></tr>';
       grid.innerHTML = '';
     });
+
+  // ── Edit Episode (navigate to rich editor) ──
+  window.editEpisode = function(id) {
+    sessionStorage.setItem('editingEpisodeId', id);
+    window.location = '/rich-editor';
+  };
 })();
 </script>
 </body>

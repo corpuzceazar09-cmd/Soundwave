@@ -80,6 +80,9 @@ const EDITOR_API = {
   },
 };
 
+// Also export requireAuth as a global for inline script compatibility
+window.requireAuth = EDITOR_API.requireAuth.bind(EDITOR_API);
+
 // Auto-run auth check on page load
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname;

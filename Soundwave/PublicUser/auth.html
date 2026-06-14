@@ -379,7 +379,7 @@
             <div class="preview-title">The Pulse: Future of AI</div>
             <div class="preview-bars"><span class="preview-bar"></span><span class="preview-bar"></span><span class="preview-bar"></span></div>
           </div>
-          <button class="preview-play">
+          <button class="preview-play" onclick="playTrending()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
           </button>
         </div>
@@ -508,6 +508,25 @@
 
   <script>
     // ── Helpers ──
+
+    function playTrending() {
+      fetch('/api/episodes/recent')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          var eps = res.data || [];
+          var ep = null;
+          for (var i = 0; i < eps.length; i++) {
+            if (eps[i].audio_url && eps[i].audio_url.indexOf('example.com') === -1) {
+              ep = eps[i]; break;
+            }
+          }
+          if (!ep) return;
+          if (typeof SoundwavePlayer !== 'undefined') {
+            SoundwavePlayer.play(ep);
+          }
+        })
+        .catch(function() {});
+    }
 
     function setLoading(active) {
       document.getElementById('loadingOverlay').classList.toggle('active', active);

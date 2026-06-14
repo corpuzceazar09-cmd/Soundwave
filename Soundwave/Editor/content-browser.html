@@ -23,10 +23,10 @@
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item active"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
-        <button class="btn-primary w-full"><i class="fa-solid fa-plus"></i> Create New Collection</button>
+        <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
           <a href="#" class="bottom-link" id="signOutBtn">
             <i class="fa-solid fa-right-from-bracket"></i>
@@ -40,17 +40,16 @@
       <header class="topbar">
         <div class="search-bar input-wrapper">
           <i class="fa-solid fa-magnifying-glass input-icon"></i>
-          <input type="text" class="form-control" placeholder="Search published episodes or articles...">
+          <input type="text" class="form-control" id="searchInput" placeholder="Search published episodes...">
         </div>
         <div class="topbar-actions">
-          <button class="export-btn">EXPORT CSV</button>
-          <button class="btn-primary">Publish Changes</button>
           <div class="notification">
             <i class="fa-regular fa-bell"></i>
             <div class="notification-dot"></div>
           </div>
-          <div class="user-profile">
-            <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563EB&color=fff" alt="User" class="user-avatar">
+          <div class="user-profile" id="sidebarUser" style="display:none">
+            <span id="sidebarEmail" style="font-size:0.85rem;margin-right:0.5rem"></span>
+            <span id="sidebarRole" class="badge badge-blue" style="font-size:0.7rem"></span>
           </div>
         </div>
       </header>
@@ -59,137 +58,260 @@
         <div class="filters-section" style="margin-bottom:1.5rem">
           <div class="filter-group">
             <span class="filter-label">FILTER BY:</span>
-            <div class="filter-select">All Categories <i class="fa-solid fa-chevron-down"></i></div>
-            <div class="filter-select">Tags <i class="fa-solid fa-chevron-down"></i></div>
-            <div class="filter-select">Sort: Newest First <i class="fa-solid fa-chevron-down"></i></div>
+            <select id="statusFilter" class="form-control" style="width:auto;display:inline-block;padding:0.5rem 2rem 0.5rem 0.75rem;font-size:0.85rem">
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="hidden">Hidden</option>
+              <option value="">All Statuses</option>
+            </select>
           </div>
           <div class="filter-results">
-            1,248 results found
-            <button class="btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.8rem"><i class="fa-solid fa-sliders"></i> Advanced Filters</button>
+            <span id="resultCount">Loading...</span>
           </div>
         </div>
 
         <!-- Featured Section -->
-        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Featured Published Items</h3>
-        <div class="featured-grid">
-          <div class="featured-main">
-            <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&h=280&fit=crop" alt="Featured Episode" style="width:100%;height:200px;object-fit:cover;border-radius:8px;display:block">
-            <div style="padding:1rem 0">
-              <div style="font-size:0.7rem;color:var(--text-gray);margin-bottom:0.5rem">ARTICLES 446 · #50</div>
-              <h4 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem">The Future of Generative Audio in Podcasts</h4>
-              <p style="font-size:0.8rem;color:var(--text-gray)">Exploring how AI is transforming voice synthesis and what it means for...</p>
-              <div style="font-size:0.75rem;color:var(--text-light);margin-top:0.75rem"><i class="fa-regular fa-thumbs-up"></i> 1.4k &nbsp; <i class="fa-regular fa-heart"></i> 6.1k · Published Oct 21, 2023</div>
-            </div>
-          </div>
-          <div class="featured-side">
-            <div class="featured-side-card" onclick="window.location='/rich-editor'">
-              <span class="badge badge-blue" style="font-size:0.65rem;margin-bottom:0.5rem"><span class="badge-dot"></span>PODCAST SHOW</span>
-              <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.5rem">Sustainable Tech: Solar Audio Farms</div>
-              <p style="font-size:0.78rem;color:var(--text-gray);margin-bottom:0.5rem">Case study on infrastructure for green data centers.</p>
-              <div style="font-size:0.75rem;color:var(--text-light)">Published Oct 13, 2023</div>
-              <div style="margin-top:0.75rem;display:flex;gap:0.5rem">
-                <button class="btn-secondary" style="font-size:0.75rem;padding:0.3rem 0.75rem">Edit</button>
-                <button class="btn-primary" style="font-size:0.75rem;padding:0.3rem 0.75rem">Inspect</button>
-              </div>
-            </div>
-          </div>
+        <div id="featuredSection" style="display:none">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Featured Podcasts</h3>
+          <div class="featured-grid" id="featuredGrid"></div>
         </div>
 
         <!-- Published Content List -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin:1.5rem 0 1rem">
-          <h3 style="font-size:1rem;font-weight:700">All Published Content</h3>
-          <div style="display:flex;gap:0.5rem">
-            <button class="view-btn-icon active"><i class="fa-solid fa-list"></i></button>
-            <button class="view-btn-icon"><i class="fa-solid fa-table-cells-large"></i></button>
+          <h3 style="font-size:1rem;font-weight:700">All Content</h3>
+        </div>
+
+        <div id="contentTableContainer">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Podcast</th>
+                <th>Status</th>
+                <th>Published</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="contentBody"></tbody>
+          </table>
+          <div id="emptyState" style="display:none;text-align:center;padding:3rem;color:var(--text-gray)">
+            <i class="fa-solid fa-search" style="font-size:2rem;margin-bottom:1rem;display:block"></i>
+            No episodes found matching your filters.
           </div>
         </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Content Title / Category</th>
-              <th>Status</th>
-              <th>Engagement</th>
-              <th>Author</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div class="podcast-title">Navigating High-Growth Markets</div>
-                <div class="podcast-publisher">Business · Episode 41</div>
-              </td>
-              <td><span class="badge badge-green"><span class="badge-dot"></span>Live</span></td>
-              <td><span style="font-weight:600">43.2k</span><br><span style="font-size:0.75rem;color:var(--text-gray)">Views</span></td>
-              <td><div style="font-weight:600;font-size:0.875rem">Elena Rodriguez</div></td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon"><i class="fa-solid fa-eye"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-title">The Psychology of Remote Teams</div>
-                <div class="podcast-publisher">WorkLife · Episode 8</div>
-              </td>
-              <td><span class="badge badge-green"><span class="badge-dot"></span>Live</span></td>
-              <td><span style="font-weight:600">12.8k</span><br><span style="font-size:0.75rem;color:var(--text-gray)">Views</span></td>
-              <td><div style="font-weight:600;font-size:0.875rem">Marcus Thoma</div></td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon"><i class="fa-solid fa-eye"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div class="podcast-title">AI Ethics: The Quiet Revolution</div>
-                <div class="podcast-publisher">Technology · Episode 22</div>
-              </td>
-              <td><span class="badge badge-green"><span class="badge-dot"></span>Live</span></td>
-              <td><span style="font-weight:600">8.4k</span><br><span style="font-size:0.75rem;color:var(--text-gray)">Views</span></td>
-              <td><div style="font-weight:600;font-size:0.875rem">Sarah Jenkins</div></td>
-              <td>
-                <div style="display:flex;gap:0.5rem">
-                  <button class="btn-icon" onclick="window.location='/rich-editor'"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon"><i class="fa-solid fa-eye"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="pagination">
-          <div class="page-info">Showing 1–25 of 1,248</div>
-          <div class="page-controls">
-            <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
-            <button class="page-btn active">1</button>
-            <button class="page-btn">2</button>
-            <button class="page-btn">3</button>
-            <button class="page-btn">42 →</button>
-            <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
-          </div>
+        <div class="pagination" id="pagination" style="display:none">
+          <div class="page-info" id="pageInfo">Showing 0-0 of 0</div>
+          <div class="page-controls" id="pageControls"></div>
         </div>
       </div>
     </main>
   </div>
+
 <script>
-(function(){var p=document.querySelector('.pagination');if(!p)return;var i=p.querySelector('.page-info'),c=p.querySelector('.page-controls'),b=c.querySelectorAll('.page-btn'),t=0;b.forEach(function(e){var n=parseInt(e.textContent.trim());if(!isNaN(n)&&n>t)t=n});var m=i.textContent.match(/Showing\s+(\d+)\u2013(\d+)\s+of\s+([\d,]+)/);if(!m)return;var tot=parseInt(m[3].replace(/,/g,'')),pp=parseInt(m[2])-parseInt(m[1])+1,cur=1;function go(n){if(n<1||n>t)return;cur=n;b.forEach(function(e){var k=parseInt(e.textContent.trim());if(!isNaN(k))e.classList.toggle('active',k===n)});var s=(n-1)*pp+1,e=Math.min(n*pp,tot);i.innerHTML='Showing '+s+'\u2013'+e+' of '+tot.toLocaleString()}b.forEach(function(e){e.addEventListener('click',function(){var n=parseInt(this.textContent.trim());if(!isNaN(n)){go(n);return}if(this.querySelector('.fa-chevron-left'))go(cur-1);if(this.querySelector('.fa-chevron-right'))go(cur+1)})})})();
+(function() {
+  const email = localStorage.getItem('editor_email');
+  const role = localStorage.getItem('editor_role');
+  if (email) {
+    document.getElementById('sidebarEmail').textContent = email;
+    document.getElementById('sidebarRole').textContent = role || 'Editor';
+    document.getElementById('sidebarUser').style.display = 'block';
+  }
+})();
+
+// ── State ──
+let currentPage = 1;
+let currentQuery = '';
+let currentStatus = 'published';
+const PAGE_SIZE = 25;
+
+// ── DOM refs ──
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const contentBody = document.getElementById('contentBody');
+const emptyState = document.getElementById('emptyState');
+const pagination = document.getElementById('pagination');
+const pageInfo = document.getElementById('pageInfo');
+const pageControls = document.getElementById('pageControls');
+const resultCount = document.getElementById('resultCount');
+const featuredSection = document.getElementById('featuredSection');
+const featuredGrid = document.getElementById('featuredGrid');
+
+// ── API helper ──
+const API = {
+  async get(path) {
+    const res = await fetch(path, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('editor_token') }
+    });
+    if (res.status === 401) { window.location.href = '/'; return null; }
+    if (!res.ok) { const err = await res.json().catch(() => ({ error: res.statusText })); throw new Error(err.error || 'Request failed'); }
+    return res.json();
+  },
+  async post(path) {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('editor_token') }
+    });
+    if (res.status === 401) { window.location.href = '/'; return null; }
+    if (!res.ok) throw new Error('Request failed');
+    return res.json();
+  }
+};
+
+// ── Load featured podcasts ──
+async function loadFeatured() {
+  try {
+    const data = await API.get('/api/editor/podcasts?featured=true&limit=6');
+    if (!data || !data.items || data.items.length === 0) {
+      featuredSection.style.display = 'none';
+      return;
+    }
+    featuredSection.style.display = 'block';
+    featuredGrid.innerHTML = data.items.map(p => {
+      const img = p.image_url || 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&h=200&fit=crop';
+      return '<div class="featured-side-card" style="cursor:pointer" onclick="window.location=\'/rich-editor?podcastId=' + p.id + '\'">' +
+        '<span class="badge badge-blue" style="font-size:0.65rem;margin-bottom:0.5rem"><span class="badge-dot"></span>FEATURED</span>' +
+        '<div style="font-weight:700;font-size:0.9rem;margin-bottom:0.5rem">' + escHtml(p.title) + '</div>' +
+        '<p style="font-size:0.78rem;color:var(--text-gray);margin-bottom:0.5rem">' + escHtml((p.description || '').substring(0, 100)) + '</p>' +
+        '<div style="font-size:0.75rem;color:var(--text-light)">By ' + escHtml(p.author || 'Unknown') + ' · ' + (p.episode_count || 0) + ' episodes</div>' +
+        '</div>';
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load featured:', e);
+    featuredSection.style.display = 'none';
+  }
+}
+
+// ── Load content ──
+async function loadContent(page) {
+  currentPage = page || 1;
+  const params = new URLSearchParams();
+  params.set('page', currentPage);
+  params.set('limit', PAGE_SIZE);
+  if (currentStatus)   params.set('status', currentStatus);
+  if (currentQuery) params.set('q', currentQuery);
+
+  try {
+    const data = await API.get('/api/episodes?' + params.toString());
+    if (!data) return;
+    renderTable(data.items || []);
+    renderPagination(data.total || 0, currentPage, PAGE_SIZE);
+    resultCount.textContent = (data.total || 0) + ' results found';
+  } catch (e) {
+    console.error('Failed to load content:', e);
+    contentBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-gray)">Failed to load content: ' + escHtml(e.message) + '</td></tr>';
+    pagination.style.display = 'none';
+    resultCount.textContent = 'Error loading results';
+  }
+}
+
+// ── Render table ──
+function renderTable(items) {
+  if (!items || items.length === 0) {
+    contentBody.innerHTML = '';
+    emptyState.style.display = 'block';
+    pagination.style.display = 'none';
+    return;
+  }
+  emptyState.style.display = 'none';
+  contentBody.innerHTML = items.map(ep => {
+    const podcast = ep.podcasts || {};
+    const statusClass = ep.status === 'published' ? 'badge-green' : ep.status === 'draft' ? 'badge-yellow' : 'badge-gray';
+    const publishedDate = ep.published_at ? new Date(ep.published_at).toLocaleDateString() : '—';
+    const canUnpublish = ep.status === 'published';
+    return '<tr>' +
+      '<td><div class="podcast-title">' + escHtml(ep.title) + '</div><div class="podcast-publisher">Ep ' + (ep.episode_number || '—') + (ep.season_number ? ' · Season ' + ep.season_number : '') + '</div></td>' +
+      '<td><div style="font-weight:600;font-size:0.875rem">' + escHtml(podcast.title || 'Unknown') + '</div><div style="font-size:0.75rem;color:var(--text-gray)">' + escHtml(podcast.author || '') + '</div></td>' +
+      '<td><span class="badge ' + statusClass + '"><span class="badge-dot"></span>' + ep.status + '</span></td>' +
+      '<td style="font-size:0.85rem;color:var(--text-gray)">' + publishedDate + '</td>' +
+      '<td><div style="display:flex;gap:0.5rem">' +
+        '<button class="btn-icon" onclick="window.location=\'/rich-editor?episodeId=' + ep.id + '\'" title="Edit"><i class="fa-solid fa-pen"></i></button>' +
+        (canUnpublish ? '<button class="btn-icon" onclick="unpublishEpisode(\'' + ep.id + '\')" title="Unpublish"><i class="fa-solid fa-eye-slash"></i></button>' : '') +
+        '<button class="btn-icon" onclick="deleteEpisode(\'' + ep.id + '\')" title="Delete"><i class="fa-solid fa-trash"></i></button>' +
+      '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ── Render pagination ──
+function renderPagination(total, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (totalPages <= 1 && total <= pageSize) {
+    pagination.style.display = 'none';
+    return;
+  }
+  pagination.style.display = 'flex';
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  pageInfo.textContent = 'Showing ' + start + '–' + end + ' of ' + total.toLocaleString();
+
+  let html = '<button class="page-btn" onclick="goToPage(' + (page - 1) + ')" ' + (page <= 1 ? 'disabled style="opacity:0.4"' : '') + '><i class="fa-solid fa-chevron-left"></i></button>';
+  const maxVisible = 5;
+  let pStart = Math.max(1, page - Math.floor(maxVisible / 2));
+  let pEnd = Math.min(totalPages, pStart + maxVisible - 1);
+  if (pEnd - pStart < maxVisible - 1) pStart = Math.max(1, pEnd - maxVisible + 1);
+  if (pStart > 1) html += '<button class="page-btn" onclick="goToPage(1)">1</button>' + (pStart > 2 ? '<button class="page-btn" disabled>…</button>' : '');
+  for (let i = pStart; i <= pEnd; i++) {
+    html += '<button class="page-btn' + (i === page ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+  }
+  if (pEnd < totalPages) html += (pEnd < totalPages - 1 ? '<button class="page-btn" disabled>…</button>' : '') + '<button class="page-btn" onclick="goToPage(' + totalPages + ')">' + totalPages + '</button>';
+  html += '<button class="page-btn" onclick="goToPage(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled style="opacity:0.4"' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
+  pageControls.innerHTML = html;
+}
+
+// ── Navigation ──
+function goToPage(page) { if (page >= 1) loadContent(page); }
+
+// ── Actions ──
+async function unpublishEpisode(id) {
+  if (!confirm('Unpublish this episode?')) return;
+  try {
+    await API.post('/api/editor/episodes/' + id + '/unpublish');
+    loadContent(currentPage);
+  } catch (e) {
+    alert('Failed to unpublish: ' + e.message);
+  }
+}
+
+async function deleteEpisode(id) {
+  if (!confirm('Delete this episode permanently?')) return;
+  try {
+    await fetch('/api/editor/episodes/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('editor_token') }
+    });
+    loadContent(currentPage);
+  } catch (e) {
+    alert('Failed to delete: ' + e.message);
+  }
+}
+
+// ── Escaping ──
+function escHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ── Event listeners ──
+let searchTimer;
+searchInput.addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(function() {
+    currentQuery = searchInput.value.trim();
+    loadContent(1);
+  }, 300);
+});
+
+statusFilter.addEventListener('change', function() {
+  currentStatus = statusFilter.value;
+  loadContent(1);
+});
+
+// ── Init ──
+loadFeatured();
+loadContent(1);
 </script>
-  <script>
-    (function() {
-      const email = localStorage.getItem('editor_email');
-      const role = localStorage.getItem('editor_role');
-      if (email) {
-        document.getElementById('sidebarEmail').textContent = email;
-        document.getElementById('sidebarRole').textContent = role || 'Editor';
-        document.getElementById('sidebarUser').style.display = 'block';
-      }
-    })();
-  </script>
 </body>
 </html>

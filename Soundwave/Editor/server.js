@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
@@ -31,7 +32,44 @@ const jwtSecret = process.env.JWT_SECRET;
 const EDITOR_EMAIL = process.env.EDITOR_EMAIL;
 const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+});
+
+// Direct REST helper for operations needing explicit anon key auth
+async function restQuery(method, path, body) {
+  const url = supabaseUrl + '/rest/v1/' + path.replace(/^\//, '');
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': 'Bearer ' + supabaseKey,
+      'Prefer': 'return=representation',
+    },
+  };
+  if (body && method !== 'GET') opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || errData.error || 'Supabase REST error (' + res.status + ')');
+  }
+  if (method === 'DELETE') return { success: true };
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// JWT Token Blacklist (in-memory, for server-side logout)
+// ---------------------------------------------------------------------------
+const tokenBlacklist = new Set();
+const BLACKLIST_CLEANUP_INTERVAL = 15 * 60 * 1000;
+setInterval(() => { tokenBlacklist.clear(); }, BLACKLIST_CLEANUP_INTERVAL);
+
+function tokenHash(token) {
+  return crypto.createHash('sha256').update(token).digest('hex').slice(0, 16);
+}
+function isTokenBlacklisted(t) { return tokenBlacklist.has(tokenHash(t)); }
+function blacklistToken(t) { tokenBlacklist.add(tokenHash(t)); }
 
 // ---------------------------------------------------------------------------
 // Express app
@@ -47,6 +85,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https://ui-avatars.com', 'https://image.simplecastcdn.com', 'https://*.supabase.co'],
       fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com'],
       connectSrc: ["'self'", `https://${supabaseUrl.replace('https://', '')}`],
@@ -72,17 +111,27 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
-app.use(cors({ origin: 'http://localhost:8081', credentials: true }));
+const ALLOWED_ORIGINS = ['http://localhost:8080', 'http://localhost:8081'];
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 
-// CSRF protection — origin header check for state-changing requests
+// CSRF protection — origin header exact-match check for state-changing requests
 app.use((req, res, next) => {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    if (origin && !origin.startsWith('http://localhost:8081')) {
+    const isAllowed = function(url) {
+      if (!url) return false;
+      try {
+        const parsed = new URL(url);
+        return ALLOWED_ORIGINS.some(function(o) { return parsed.origin === o; });
+      } catch {
+        return false;
+      }
+    };
+    if (origin && !isAllowed(origin)) {
       return res.status(403).json({ error: 'CSRF validation failed' });
     }
-    if (!origin && referer && !referer.startsWith('http://localhost:8081')) {
+    if (!origin && referer && !isAllowed(referer)) {
       return res.status(403).json({ error: 'CSRF validation failed' });
     }
   }
@@ -95,7 +144,7 @@ app.use(express.json());
 // JWT helpers
 // ---------------------------------------------------------------------------
 function generateToken(payload) {
-  return jwt.sign(payload, jwtSecret, { expiresIn: '12h' });
+  return jwt.sign(payload, jwtSecret, { expiresIn: '2h' });
 }
 
 function authMiddleware(req, res, next) {
@@ -104,13 +153,25 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ error: 'No token provided' });
   }
   try {
-    const decoded = jwt.verify(authHeader.split(' ')[1], jwtSecret);
+    const token = authHeader.split(' ')[1];
+    // Check if token has been blacklisted (logged out)
+    if (isTokenBlacklisted(token)) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+    const decoded = jwt.verify(token, jwtSecret);
     req.editor = decoded;
+    req.token = token;
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+// POST /api/logout — blacklist the current token
+app.post('/api/logout', authMiddleware, (req, res) => {
+  if (req.token) blacklistToken(req.token);
+  res.json({ success: true, message: 'Logged out successfully' });
+});
 
 // ---------------------------------------------------------------------------
 // Route: POST /api/login
@@ -236,36 +297,33 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/review-queue — pending highlights with episode/podcast info
+// GET /api/review-queue — draft episodes awaiting review
 app.get('/api/review-queue', authMiddleware, async (req, res) => {
   try {
-    const status = req.query.status || 'pending';
-    const { data, error } = await supabase
-      .from('highlights')
+    const { data, error, count } = await supabase
+      .from('episodes')
       .select(`
-        id, title, description, start_time, end_time, tags, status, created_at,
-        episode_id!inner (
-          id, title, duration, published_at,
-          podcast_id!inner (
-            id, title, image_url, author
-          )
+        id, title, description, audio_url, duration, episode_number, season_number,
+        status, published_at, created_at,
+        podcast_id, podcasts!inner (
+          id, title, image_url, author, feed_url
         )
-      `)
-      .eq('status', status)
+      `, { count: 'exact' })
+      .eq('status', 'draft')
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (error) return res.status(500).json({ error: error.message });
 
     const { count: totalPending } = await supabase
-      .from('highlights')
+      .from('episodes')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
+      .eq('status', 'draft');
 
     const { count: inReview } = await supabase
-      .from('highlights')
+      .from('episodes')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'accepted');
+      .eq('status', 'published');
 
     res.json({
       items: data || [],
@@ -280,7 +338,7 @@ app.get('/api/review-queue', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/review-queue/:id — approve or reject a highlight
+// PUT /api/review-queue/:id — approve or reject a draft episode
 app.put('/api/review-queue/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -290,19 +348,68 @@ app.put('/api/review-queue/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('highlights')
-      .update({ status, updated_at: new Date().toISOString() })
+    const { data: episode, error: fetchError } = await supabase
+      .from('episodes')
+      .select('id, title, status, podcast_id')
       .eq('id', id)
-      .select()
+      .single();
+
+    if (fetchError || !episode) {
+      return res.status(404).json({ error: 'Episode not found' });
+    }
+
+    const newStatus = status === 'accepted' ? 'published' : 'draft';
+
+    const { error: updateError } = await supabase
+      .from('episodes')
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    await EditorialAction.create({
+      episode_id: id,
+      action: status === 'accepted' ? 'published' : 'rejected',
+      editor_id: req.editor.sub,
+      editor_name: req.editor.email || 'Unknown',
+      notes: `Review queue: ${status}`,
+      previous_status: episode.status,
+      new_status: newStatus,
+      episode_title: episode.title,
+    });
+
+    res.json({ success: true, message: `Episode ${status}` });
+  } catch (err) {
+    console.error('[REVIEW UPDATE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/episodes/:id — single episode with podcast info
+app.get('/api/episodes/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('episodes')
+      .select(`
+        id, title, description, audio_url, duration, episode_number, season_number,
+        status, published_at, created_at, updated_at,
+        podcast_id, podcasts!inner (
+          id, title, image_url, author, feed_url
+        )
+      `)
+      .eq('id', id)
       .single();
 
     if (error) return res.status(500).json({ error: error.message });
-    if (!data) return res.status(404).json({ error: 'Highlight not found' });
+    if (!data) return res.status(404).json({ error: 'Episode not found' });
 
     res.json(data);
   } catch (err) {
-    console.error('[REVIEW UPDATE ERROR]', err);
+    console.error('[GET EPISODE ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -313,16 +420,27 @@ app.get('/api/episodes', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 50;
     const offset = (page - 1) * limit;
+    const { q, status } = req.query;
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('episodes')
       .select(`
         id, title, description, audio_url, duration, episode_number, season_number,
         status, published_at, created_at,
-        podcast_id!inner (
+        podcast_id, podcasts!inner (
           id, title, image_url, author
         )
-      `, { count: 'exact' })
+      `, { count: 'exact' });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (q) {
+      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    }
+
+    const { data, error, count } = await query
       .order('published_at', { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1);
 
@@ -363,7 +481,7 @@ app.get('/api/episodes', authMiddleware, async (req, res) => {
 // PUT /api/episodes/:id — update episode (title, status, etc.)
 app.put('/api/episodes/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const allowed = ['title', 'description', 'status', 'episode_number', 'season_number', 'duration'];
+  const allowed = ['title', 'description', 'status', 'episode_number', 'season_number', 'duration', 'image_url'];
   const updates = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -398,6 +516,110 @@ app.put('/api/episodes/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Image upload ──
+const UPLOADS_DIR = path.join(__dirname, 'uploads', 'covers');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// ── Image upload with content validation ──
+const VALID_IMAGE_SIGNATURES = {
+  'image/png': [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+  'image/jpeg': [0xFF, 0xD8, 0xFF],
+  'image/gif': [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],   // GIF87a
+  'image/webp': [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50], // RIFF....WEBP
+};
+
+function detectImageType(buffer) {
+  for (const [mime, sig] of Object.entries(VALID_IMAGE_SIGNATURES)) {
+    const matches = sig.every((byte, i) => buffer[i] === byte);
+    if (matches) return mime;
+  }
+  return null;
+}
+
+app.post('/api/upload/image', authMiddleware, async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid image data' });
+    }
+    // Accept both 'data:image/...' URLs and raw base64
+    const base64Data = image.includes('base64,') ? image.split('base64,')[1] : image;
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Reject empty or tiny payloads
+    if (buffer.length < 16) {
+      return res.status(400).json({ error: 'Invalid image data — too small' });
+    }
+
+    // Reject oversized files (max 5MB)
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Image too large — max 5MB' });
+    }
+
+    // Validate actual file content via magic bytes
+    const detectedMime = detectImageType(buffer);
+    if (!detectedMime) {
+      return res.status(400).json({ error: 'Invalid image type — only PNG, JPEG, GIF, and WebP are allowed' });
+    }
+
+    const ext = '.' + detectedMime.split('/')[1];
+    const filename = crypto.randomUUID() + ext;
+    const filePath = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(filePath, buffer);
+    res.json({ url: '/uploads/covers/' + filename, mime: detectedMime });
+  } catch (err) {
+    console.error('[IMAGE UPLOAD ERROR]', err);
+    res.status(500).json({ error: 'Image upload failed' });
+  }
+});
+
+// ── Tags (shared file with PublicUser) ──
+const TAGS_FILE = path.join(__dirname, '..', 'PublicUser', 'data', 'tags.json');
+
+function loadTags() {
+  try {
+    const raw = fs.readFileSync(TAGS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveTags(tags) {
+  const dir = path.dirname(TAGS_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(TAGS_FILE, JSON.stringify(tags, null, 2), 'utf8');
+}
+
+// GET /api/episodes/:id/tags — get tags for an episode
+app.get('/api/episodes/:id/tags', authMiddleware, (req, res) => {
+  try {
+    const tags = loadTags();
+    res.json({ tags: tags[req.params.id] || [] });
+  } catch (err) {
+    console.error('[TAGS GET ERROR]', err.message);
+    res.json({ tags: [] });
+  }
+});
+
+// POST /api/episodes/:id/tags — save tags for an episode
+app.post('/api/episodes/:id/tags', authMiddleware, (req, res) => {
+  try {
+    if (!Array.isArray(req.body.tags)) {
+      return res.status(400).json({ error: 'tags must be an array of strings' });
+    }
+    const tags = loadTags();
+    tags[req.params.id] = req.body.tags.map(function(t) { return String(t).trim().toLowerCase(); }).filter(Boolean);
+    saveTags(tags);
+    res.json({ tags: tags[req.params.id] });
+  } catch (err) {
+    console.error('[TAGS POST ERROR]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/collections — all collections with podcast count
 app.get('/api/collections', authMiddleware, async (req, res) => {
   try {
@@ -428,6 +650,127 @@ app.get('/api/collections', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('[COLLECTIONS ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/collections — create collection
+app.post('/api/collections', authMiddleware, async (req, res) => {
+  try {
+    const { name, description, cover_image_url, is_public } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Collection name is required' });
+
+    const { data, error } = await supabase
+      .from('collections')
+      .insert({ name: name.trim(), description: description || '', cover_image_url: cover_image_url || null, is_public: is_public !== false })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('[COLLECTION CREATE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/collections/:id — update collection
+app.put('/api/collections/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allowed = ['name', 'description', 'cover_image_url', 'is_public'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+
+    const { data, error } = await supabase
+      .from('collections')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Collection not found' });
+    res.json(data);
+  } catch (err) {
+    console.error('[COLLECTION UPDATE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/collections/:id — delete collection
+app.delete('/api/collections/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Remove all podcast associations first
+    await supabase.from('collection_podcasts').delete().eq('collection_id', id);
+
+    const { error } = await supabase.from('collections').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[COLLECTION DELETE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/collections/:id/podcasts — podcasts in a collection
+app.get('/api/collections/:id/podcasts', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('collection_podcasts')
+      .select('podcast_id, podcasts!inner(id, title, author, image_url, description)')
+      .eq('collection_id', id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data ? data.map(cp => cp.podcasts) : []);
+  } catch (err) {
+    console.error('[COLLECTION PODCASTS ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/collections/:id/podcasts — add podcast to collection
+app.post('/api/collections/:id/podcasts', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { podcast_id } = req.body;
+    if (!podcast_id) return res.status(400).json({ error: 'podcast_id is required' });
+
+    const { error } = await supabase
+      .from('collection_podcasts')
+      .insert({ collection_id: id, podcast_id });
+
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'Podcast already in collection' });
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error('[COLLECTION ADD PODCAST ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/collections/:id/podcasts/:podcastId — remove podcast from collection
+app.delete('/api/collections/:id/podcasts/:podcastId', authMiddleware, async (req, res) => {
+  try {
+    const { id, podcastId } = req.params;
+    const { error } = await supabase
+      .from('collection_podcasts')
+      .delete()
+      .eq('collection_id', id)
+      .eq('podcast_id', podcastId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[COLLECTION REMOVE PODCAST ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -566,7 +909,7 @@ app.put('/api/editor/episodes/:id/status', authMiddleware, async (req, res) => {
 // GET /api/editor/podcasts - list all podcasts with episode counts
 app.get('/api/editor/podcasts', authMiddleware, async (req, res) => {
   try {
-    const { search, limit = 50, offset = 0 } = req.query;
+    const { search, featured, limit = 50, offset = 0 } = req.query;
 
     let query = supabase
       .from('podcasts')
@@ -574,6 +917,10 @@ app.get('/api/editor/podcasts', authMiddleware, async (req, res) => {
 
     if (search) {
       query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    if (featured !== undefined) {
+      query = query.eq('featured', featured === 'true');
     }
 
     const { data, count, error } = await query
@@ -732,8 +1079,55 @@ app.post('/api/editor/drafts/:id/publish', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/editor/drafts/:id
-app.delete('/api/editor/drafts/:id', authMiddleware, async (req, res) => {
+// POST /api/editor/episodes/:id/unpublish — revert a published episode back to draft
+app.post('/api/editor/episodes/:id/unpublish', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data: episode, error: fetchError } = await supabase
+      .from('episodes')
+      .select('id, title, status, podcast_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !episode) {
+      return res.status(404).json({ error: 'Episode not found' });
+    }
+
+    if (episode.status !== 'published') {
+      return res.status(400).json({ error: 'Episode is not published' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('episodes')
+      .update({
+        status: 'draft',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    await EditorialAction.create({
+      episode_id: id,
+      action: 'drafted',
+      editor_id: req.editor.sub,
+      editor_name: req.editor.email || 'Unknown',
+      notes: req.body.notes || '',
+      previous_status: 'published',
+      new_status: 'draft',
+      episode_title: episode.title,
+    });
+
+    res.json({ success: true, message: `"${episode.title}" unpublished` });
+  } catch (err) {
+    console.error('[UNPUBLISH ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/editor/episodes/:id — delete any episode by ID
+app.delete('/api/editor/episodes/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -743,6 +1137,10 @@ app.delete('/api/editor/drafts/:id', authMiddleware, async (req, res) => {
       .eq('id', id)
       .single();
 
+    if (!episode) {
+      return res.status(404).json({ error: 'Episode not found' });
+    }
+
     const { error: deleteError } = await supabase
       .from('episodes')
       .delete()
@@ -750,19 +1148,17 @@ app.delete('/api/editor/drafts/:id', authMiddleware, async (req, res) => {
 
     if (deleteError) throw deleteError;
 
-    if (episode) {
-      await EditorialAction.create({
-        episode_id: id,
-        action: 'deleted',
-        editor_id: req.editor.sub,
-        editor_name: req.editor.email || 'Unknown',
-        episode_title: episode.title,
-      });
-    }
+    await EditorialAction.create({
+      episode_id: id,
+      action: 'deleted',
+      editor_id: req.editor.sub,
+      editor_name: req.editor.email || 'Unknown',
+      episode_title: episode.title,
+    });
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[DELETE DRAFT ERROR]', err);
+    console.error('[DELETE EPISODE ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -816,6 +1212,175 @@ const cleanUrlMap = {
   '/content-browser': '/content-browser.html',
   '/admin-settings': '/admin-settings.html',
 };
+
+// POST /api/editor/drafts/publish-all — bulk publish all drafts with optional podcast filter
+app.post('/api/editor/drafts/publish-all', authMiddleware, async (req, res) => {
+  try {
+    const { podcast_id } = req.body;
+    let query = supabase
+      .from('episodes')
+      .select('id, title')
+      .eq('status', 'draft');
+
+    if (podcast_id) query = query.eq('podcast_id', podcast_id);
+
+    const { data: drafts, error: fetchError } = await query;
+
+    if (fetchError) throw fetchError;
+    if (!drafts || drafts.length === 0) {
+      return res.json({ success: true, published: 0, message: 'No drafts to publish' });
+    }
+
+    const ids = drafts.map(d => d.id);
+
+    const { error: updateError } = await supabase
+      .from('episodes')
+      .update({
+        status: 'published',
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', ids);
+
+    if (updateError) throw updateError;
+
+    // Log to editorial history
+    for (const ep of drafts) {
+      try {
+        await EditorialAction.create({
+          episode_id: ep.id,
+          action: 'published',
+          editor_id: req.editor.sub,
+          editor_name: req.editor.email || 'Unknown',
+          notes: 'Bulk published (Publish All Drafts)',
+          previous_status: 'draft',
+          new_status: 'published',
+          episode_title: ep.title,
+        });
+      } catch (_) { /* individual log failure non-fatal */ }
+    }
+
+    res.json({ success: true, published: drafts.length, message: `Published ${drafts.length} episode(s)` });
+  } catch (err) {
+    console.error('[PUBLISH ALL ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Highlight Routes
+// ---------------------------------------------------------------------------
+
+// GET /api/episodes/:id/highlights — list highlights for an episode
+app.get('/api/episodes/:id/highlights', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await restQuery('GET', `highlights?episode_id=eq.${id}&order=start_time.asc`);
+    res.json({ highlights: data || [] });
+  } catch (err) {
+    console.error('[HIGHLIGHTS LIST ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/episodes/:id/highlights/detect — auto-detect 3 highlight clips
+app.post('/api/episodes/:id/highlights/detect', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get episode duration (use supabase JS client for reads)
+    const { data: episode, error: epError } = await supabase
+      .from('episodes')
+      .select('duration, title')
+      .eq('id', id)
+      .single();
+    if (epError) throw epError;
+    if (!episode || !episode.duration) {
+      return res.status(400).json({ error: 'Episode duration required. Set duration in episode settings.' });
+    }
+
+    // Check for existing pending highlights
+    const existing = await restQuery('GET', `highlights?episode_id=eq.${id}&status=eq.pending&select=id`);
+    if (existing && existing.length > 0) {
+      return res.status(409).json({ error: 'Existing pending highlights. Handle them first.' });
+    }
+
+    const dur = episode.duration;
+    const clips = [
+      { start_time: Math.floor(dur * 0.10), end_time: Math.min(Math.floor(dur * 0.10) + 60, Math.floor(dur * 0.25)), title: 'Opening Moments' },
+      { start_time: Math.floor(dur * 0.35), end_time: Math.min(Math.floor(dur * 0.35) + 60, Math.floor(dur * 0.55)), title: 'Key Discussion' },
+      { start_time: Math.floor(dur * 0.70), end_time: Math.min(Math.floor(dur * 0.70) + 60, Math.floor(dur * 0.85)), title: 'Closing Thoughts' }
+    ];
+
+    const inserts = clips.map(c => ({
+      episode_id: id,
+      start_time: c.start_time,
+      end_time: c.end_time,
+      title: c.title,
+      status: 'pending'
+    }));
+
+    const data = await restQuery('POST', 'highlights', inserts);
+    res.status(201).json({ highlights: data, message: `3 highlights generated` });
+  } catch (err) {
+    console.error('[HIGHLIGHTS DETECT ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/highlights/:id — update a highlight
+app.put('/api/highlights/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, tags, start_time, end_time, status } = req.body;
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (tags !== undefined) updates.tags = tags;
+    if (start_time !== undefined) updates.start_time = start_time;
+    if (end_time !== undefined) updates.end_time = end_time;
+    if (status !== undefined) updates.status = status;
+    updates.updated_at = new Date().toISOString();
+
+    const data = await restQuery('PATCH', `highlights?id=eq.${id}`, updates);
+    if (data && data.length > 0) {
+      res.json({ highlight: data[0] });
+    } else {
+      res.json({ highlight: null });
+    }
+  } catch (err) {
+    console.error('[HIGHLIGHTS UPDATE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/highlights/:id — delete a highlight
+app.delete('/api/highlights/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await restQuery('DELETE', `highlights?id=eq.${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[HIGHLIGHTS DELETE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/highlights/:id/approve — approve a highlight
+app.post('/api/highlights/:id/approve', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await restQuery('PATCH', `highlights?id=eq.${id}`, { status: 'accepted', updated_at: new Date().toISOString() });
+    if (data && data.length > 0) {
+      res.json({ highlight: data[0] });
+    } else {
+      res.json({ highlight: null });
+    }
+  } catch (err) {
+    console.error('[HIGHLIGHTS APPROVE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get(Object.keys(cleanUrlMap), (req, res) => {
   const filePath = path.join(__dirname, cleanUrlMap[req.path]);
@@ -883,7 +1448,6 @@ async function startServer() {
     console.log('=============================================');
     console.log('  Soundwave Editor Server');
     console.log(`  Running on: http://localhost:${PORT}`);
-    console.log('  Login: editor@soundwave.com / editor123');
     console.log('  Press CTRL+C to stop');
     console.log('=============================================');
   });

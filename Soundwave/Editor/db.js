@@ -13,6 +13,27 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Direct REST client for operations that need explicit anon key auth
+async function restQuery(method, path, body) {
+  const url = supabaseUrl + '/rest/v1/' + path.replace(/^\//, '');
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': 'Bearer ' + supabaseKey,
+      'Prefer': 'return=representation',
+    },
+  };
+  if (body && method !== 'GET') opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || data.error || 'Supabase REST error');
+  return data;
+}
+
+module.exports = { connectToDatabase, connectMongo, mongoConnected, supabase, restQuery };
+
 async function connectToDatabase() {
   try {
     // Verify connection by fetching a single row

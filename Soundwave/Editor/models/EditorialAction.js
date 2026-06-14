@@ -5,7 +5,7 @@ const editorialActionSchema = new mongoose.Schema({
   action: {
     type: String,
     required: true,
-    enum: ['published', 'hidden', 'drafted', 'edited', 'featured', 'unfeatured'],
+    enum: ['published', 'hidden', 'drafted', 'deleted', 'rejected', 'edited', 'featured', 'unfeatured'],
   },
   editor_id: { type: String, required: true },
   editor_name: { type: String, default: '' },

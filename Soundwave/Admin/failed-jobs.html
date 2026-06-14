@@ -27,7 +27,7 @@
         <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
 
         <div class="nav-label">Monitoring</div>
-        <a href="failed-jobs.html" class="active"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="failed-jobs.html" class="active"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">—</span></a>
         <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
         <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
       </nav>
@@ -242,7 +242,7 @@
             const id = this.dataset.id;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             try {
-              await fetch('/api/admin/failed/retry/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+              await fetch('/api/admin/failed/ingestion/retry/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
             } catch(e) {}
             showToast('Retry triggered for job #' + id, 'success');
             this.innerHTML = '<i class="fas fa-redo"></i> Retry';
@@ -256,7 +256,7 @@
             renderFailedIngestions();
             updateSummary();
             try {
-              await fetch('/api/admin/failed/dismiss/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+              await fetch('/api/admin/failed/ingestion/dismiss/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
             } catch(e) {}
             showToast('Job dismissed', 'info');
           });
@@ -269,7 +269,19 @@
         document.getElementById('totalRetries').textContent =
           failedFeeds.reduce((s, f) => s + (f.retries || 0), 0) +
           failedIngestions.reduce((s, j) => s + (j.retries || 0), 0);
-        document.getElementById('failedCount').textContent = failedFeeds.length + failedIngestions.length;
+      }
+
+      // --- Update sidebar badge from the consistent stats API ---
+      async function updateFailedCount() {
+        try {
+          const fc = document.getElementById('failedCount');
+          if (!fc) return;
+          const r = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            fc.textContent = d.failedJobs ?? '—';
+          }
+        } catch(e) {}
       }
 
       async function loadData() {
@@ -302,7 +314,7 @@
       document.getElementById('retryAllIngestionsBtn').addEventListener('click', async function() {
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Retrying...';
         try {
-          await fetch('/api/admin/failed/retry-all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+          await fetch('/api/admin/failed/ingestion/retry-all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
         } catch(e) {}
         showToast('Retrying all failed ingestion jobs...', 'info');
         this.innerHTML = '<i class="fas fa-redo"></i> Retry All Ingestion';
@@ -319,6 +331,7 @@
         setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
       }
 
+      updateFailedCount();
       loadData();
     })();
   </script>

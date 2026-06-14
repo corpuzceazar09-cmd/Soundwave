@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, usePathname } from 'expo-router';
-import { useAuth, isMockMode } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 
 type NavItem = {
   label: string;
@@ -44,11 +44,6 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (loading) return;
-
-    if (isMockMode()) {
-      setChecking(false);
-      return;
-    }
 
     if (role !== 'Admin') {
       if (!redirectedRef.current) {

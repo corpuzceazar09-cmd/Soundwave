@@ -23,9 +23,13 @@
         <a href="/episodes" class="nav-item active"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
+        <div id="sidebarUser" style="display:none;padding:0.5rem 1rem;border-top:1px solid var(--border-color)">
+          <div style="font-size:0.8125rem;font-weight:600" id="sidebarEmail"></div>
+          <div style="font-size:0.7rem;color:var(--text-gray)" id="sidebarRole"></div>
+        </div>
         <button class="btn-primary w-full" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
         <div class="sidebar-bottom-links">
           <a href="#" class="bottom-link" id="signOutBtn">
@@ -46,6 +50,7 @@
           <button class="filter-pill">All Status <i class="fa-solid fa-chevron-down"></i></button>
           <button class="filter-pill">All Collections <i class="fa-solid fa-chevron-down"></i></button>
           <button class="export-btn">Export CSV</button>
+          <button class="btn-primary" style="background:#059669" onclick="publishAllDrafts()"><i class="fa-solid fa-check-circle"></i> Publish All Drafts</button>
           <button class="btn-primary" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
           <div class="notification">
             <i class="fa-regular fa-bell"></i>
@@ -192,8 +197,8 @@ requireAuth();
           '<td><div class="ep-row-info"><button class="ep-play-btn"><i class="fa-solid fa-play"></i></button><div><div class="podcast-title">' + title + '</div><div class="podcast-publisher">' + podcastName + '</div></div></div></td>' +
           '<td>' + duration + '</td>' +
           '<td>' + pubDate + '</td>' +
-          '<td><label class="toggle-switch"><input type="checkbox"' + (isPub ? ' checked' : '') + '><span class="toggle-slider"></span></label> ' + statusLabel + '</td>' +
-          '<td><div style="display:flex;gap:0.5rem"><button class="btn-icon" onclick="window.location=\'/rich-editor\'" title="Edit"><i class="fa-solid fa-pen"></i></button><button class="btn-icon" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button></div></td>' +
+          '<td><label class="toggle-switch"><input type="checkbox" data-ep-id="' + ep.id + '"' + (isPub ? ' checked' : '') + ' onchange="togglePublish(this)"><span class="toggle-slider"></span></label> <span class="toggle-label">' + statusLabel + '</span></td>' +
+          '<td><div style="display:flex;gap:0.5rem"><button class="btn-icon" onclick="editEpisode(\'' + ep.id + '\')" title="Edit"><i class="fa-solid fa-pen"></i></button><button class="btn-icon" onclick="deleteEpisode(\'' + ep.id + '\')" title="Delete" style="color:var(--error-text)"><i class="fa-solid fa-trash"></i></button></div></td>' +
           '</tr>';
       }).join('');
 
@@ -207,6 +212,64 @@ requireAuth();
       console.error('Failed to load episodes:', err);
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--error-text)">Failed to load episodes</td></tr>';
     });
+
+  // ── Publish / Unpublish toggle ──
+  window.togglePublish = function(checkbox) {
+    const epId = checkbox.dataset.epId;
+    const isChecked = checkbox.checked;
+    const action = isChecked ? 'publish' : 'unpublish';
+    const url = '/api/editor/' + (isChecked ? 'drafts/' + epId + '/publish' : 'episodes/' + epId + '/unpublish');
+
+    EDITOR_API.post(url, {})
+      .then(function(res) {
+        var cell = checkbox.closest('td');
+        var label = cell.querySelector('.toggle-label');
+        if (label) label.textContent = isChecked ? 'Published' : 'Draft';
+      })
+      .catch(function(err) {
+        console.error('[Toggle]', err);
+        checkbox.checked = !isChecked; // revert
+        alert('Failed to ' + action + ': ' + (err.message || 'Unknown error'));
+      });
+  };
+
+  // ── Publish All Drafts ──
+  window.publishAllDrafts = function() {
+    if (!confirm('Publish all draft episodes? They will immediately be visible to users.')) return;
+    var btn = document.querySelector('.topbar-actions .btn-primary');
+    if (btn) btn.disabled = true;
+    EDITOR_API.post('/api/editor/drafts/publish-all', {})
+      .then(function(res) {
+        alert('Published ' + res.published + ' episode(s)');
+        location.reload();
+      })
+      .catch(function(err) {
+        console.error('[Publish All]', err);
+        alert('Failed to publish all: ' + (err.message || 'Unknown error'));
+        if (btn) btn.disabled = false;
+      });
+  };
+
+  // ── Edit Episode ──
+  window.editEpisode = function(id) {
+    // Store episode ID and navigate to rich editor
+    sessionStorage.setItem('editingEpisodeId', id);
+    window.location = '/rich-editor';
+  };
+
+  // ── Delete Episode ──
+  window.deleteEpisode = function(id) {
+    if (!confirm('Delete this episode? This cannot be undone.')) return;
+    EDITOR_API.del('/api/editor/episodes/' + id)
+      .then(function(res) {
+        alert('Episode deleted');
+        location.reload();
+      })
+      .catch(function(err) {
+        console.error('[Delete]', err);
+        alert('Failed to delete: ' + (err.message || 'Unknown error'));
+      });
+  };
 })();
 </script>
 </body>

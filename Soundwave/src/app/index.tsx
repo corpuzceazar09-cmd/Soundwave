@@ -12,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth, mockLogin, type AppRole } from '@/lib/auth';
+import { useAuth, type AppRole } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -52,11 +53,30 @@ export default function LoginScreen() {
     setLoading(true);
     setAuthError(null);
     try {
-      const role = mockLogin(data.email);
-      login(data.email);
-      navigateByRole(role);
+      // Authenticate via Supabase
+      const result = await login(data.email, data.password);
+      if (result.error) {
+        setAuthError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch user role after successful login to determine navigation
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        const userRole: AppRole = roleData?.role || 'User';
+        navigateByRole(userRole);
+      } else {
+        setAuthError('Authentication succeeded but session was not established');
+      }
     } catch (e) {
-      setAuthError('An unexpected error occurred');
+      setAuthError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

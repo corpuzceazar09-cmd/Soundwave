@@ -164,9 +164,13 @@
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item active"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
+        <div id="sidebarUser" style="display:none;padding:0.5rem 1rem;border-top:1px solid var(--border-color)">
+          <div style="font-size:0.8125rem;font-weight:600" id="sidebarEmail"></div>
+          <div style="font-size:0.7rem;color:var(--text-gray)" id="sidebarRole"></div>
+        </div>
         <button class="btn-primary w-full" onclick="window.location='/rich-editor'"><i class="fa-solid fa-plus"></i> New Episode</button>
         <div class="sidebar-bottom-links">
           <a href="#" class="bottom-link" id="signOutBtn">

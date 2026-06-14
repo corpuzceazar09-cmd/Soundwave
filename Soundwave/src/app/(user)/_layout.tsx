@@ -11,7 +11,7 @@ import {
 import { Slot, useRouter, useSegments, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, isMockMode } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IS_WIDE = SCREEN_WIDTH >= 1024;
@@ -45,11 +45,6 @@ export default function UserLayout() {
 
   useEffect(() => {
     if (loading) return;
-
-    if (isMockMode()) {
-      setChecking(false);
-      return;
-    }
 
     if (!role || role !== 'User') {
       router.replace('/');

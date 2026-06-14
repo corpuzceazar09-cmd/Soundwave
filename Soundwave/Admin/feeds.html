@@ -27,7 +27,7 @@
         <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
 
         <div class="nav-label">Monitoring</div>
-        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">—</span></a>
         <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
         <a href="raw-data.html"><i class="fas fa-database"></i><span>Raw Data</span></a>
       </nav>
@@ -110,6 +110,20 @@
     (function() {
       // Auth guard and logout are handled by admin-auth.js
       const token = ADMIN_AUTH.getToken();
+
+      // --- Update sidebar badge consistently across all pages ---
+      async function updateFailedCount() {
+        try {
+          const fc = document.getElementById('failedCount');
+          if (!fc) return;
+          const r = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            fc.textContent = d.failedJobs ?? '—';
+          }
+        } catch(e) {}
+      }
+      updateFailedCount();
 
       // --- Sample feeds data ---
       const SAMPLE_FEEDS = [

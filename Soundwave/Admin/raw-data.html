@@ -27,7 +27,7 @@
         <a href="add-feed.html"><i class="fas fa-plus-circle"></i><span>Add Feed</span></a>
 
         <div class="nav-label">Monitoring</div>
-        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">23</span></a>
+        <a href="failed-jobs.html"><i class="fas fa-exclamation-triangle"></i><span>Failed Jobs</span><span class="badge" id="failedCount">—</span></a>
         <a href="ingestion-logs.html"><i class="fas fa-history"></i><span>Ingestion Logs</span></a>
         <a href="raw-data.html" class="active"><i class="fas fa-database"></i><span>Raw Data</span></a>
       </nav>
@@ -137,51 +137,19 @@
       // Auth guard and logout are handled by admin-auth.js
       const token = ADMIN_AUTH.getToken();
 
-      // --- Sample Podcasts ---
-      const SAMPLE_PODCASTS = [
-        { id: 1, name: 'Tech Frontier', author: 'Sarah Chen', category: 'Technology', episodes: 342, last_updated: '2026-06-07' },
-        { id: 2, name: 'Deep Dives', author: 'Marcus Webb', category: 'Science', episodes: 156, last_updated: '2026-06-07' },
-        { id: 3, name: 'Code & Coffee', author: 'Alex Rivera', category: 'Technology', episodes: 210, last_updated: '2026-06-07' },
-        { id: 4, name: 'Startup Stories', author: 'Jessica Kim', category: 'Business', episodes: 89, last_updated: '2026-06-06' },
-        { id: 5, name: 'Data Driven Weekly', author: 'Dr. Nina Patel', category: 'Science', episodes: 278, last_updated: '2026-06-07' },
-        { id: 6, name: 'AI Revolution', author: 'Tom Nakamura', category: 'Technology', episodes: 195, last_updated: '2026-06-07' },
-        { id: 7, name: 'The Creative Block', author: 'Olivia Grant', category: 'Arts', episodes: 67, last_updated: '2026-06-05' },
-        { id: 8, name: 'Laugh Track', author: 'Danny O\'Brien', category: 'Comedy', episodes: 412, last_updated: '2026-06-07' },
-        { id: 9, name: 'EduCast', author: 'Prof. James Wright', category: 'Education', episodes: 134, last_updated: '2026-06-06' },
-        { id: 10, name: 'Soundwave Sessions', author: 'Luna Martinez', category: 'Music', episodes: 520, last_updated: '2026-06-07' },
-        { id: 11, name: 'Health & Wellness', author: 'Dr. Amara Singh', category: 'Science', episodes: 98, last_updated: '2026-06-04' },
-        { id: 12, name: 'Game On', author: 'Ryan Scott', category: 'Technology', episodes: 634, last_updated: '2026-06-07' }
-      ];
-
-      const EPISODE_DATA = {
-        1: [
-          { id: 101, title: 'The Future of Quantum Computing', duration_sec: 3600, published_at: '2026-06-05', status: 'ingested' },
-          { id: 102, title: 'AI in Healthcare: Revolution or Risk?', duration_sec: 2700, published_at: '2026-05-29', status: 'ingested' },
-          { id: 103, title: 'Building Scalable Microservices', duration_sec: 4200, published_at: '2026-05-22', status: 'pending' },
-          { id: 104, title: 'The Rise of Edge Computing', duration_sec: 3100, published_at: '2026-05-15', status: 'ingested' },
-          { id: 105, title: 'Cybersecurity in a Remote World', duration_sec: 2800, published_at: '2026-05-08', status: 'failed' }
-        ],
-        2: [
-          { id: 201, title: 'Ocean Exploration in 2026', duration_sec: 3900, published_at: '2026-06-06', status: 'ingested' },
-          { id: 202, title: 'The Physics of Black Holes', duration_sec: 4500, published_at: '2026-05-30', status: 'ingested' },
-          { id: 203, title: 'Climate Change: Latest Research', duration_sec: 3300, published_at: '2026-05-23', status: 'ingested' }
-        ],
-        3: [
-          { id: 301, title: 'Rust vs Go in Production', duration_sec: 2400, published_at: '2026-06-06', status: 'ingested' },
-          { id: 302, title: 'TypeScript Secrets You Should Know', duration_sec: 2100, published_at: '2026-05-30', status: 'ingested' },
-          { id: 303, title: 'The State of WebAssembly', duration_sec: 3600, published_at: '2026-05-23', status: 'pending' }
-        ]
-      };
-      // Fill remaining with generated data
-      SAMPLE_PODCASTS.forEach(p => {
-        if (!EPISODE_DATA[p.id]) {
-          EPISODE_DATA[p.id] = [
-            { id: p.id * 100 + 1, title: p.name + ' - Episode 1', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-06-0' + (Math.floor(Math.random() * 7) + 1), status: 'ingested' },
-            { id: p.id * 100 + 2, title: p.name + ' - Episode 2', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-05-0' + (Math.floor(Math.random() * 28) + 1), status: 'ingested' },
-            { id: p.id * 100 + 3, title: p.name + ' - Episode 3', duration_sec: Math.floor(Math.random() * 3600) + 1200, published_at: '2026-05-0' + (Math.floor(Math.random() * 15) + 1), status: 'pending' }
-          ];
-        }
-      });
+      // --- Update sidebar badge consistently across all pages ---
+      async function updateFailedCount() {
+        try {
+          const fc = document.getElementById('failedCount');
+          if (!fc) return;
+          const r = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            fc.textContent = d.failedJobs ?? '—';
+          }
+        } catch(e) {}
+      }
+      updateFailedCount();
 
       let podcasts = [];
 
@@ -208,8 +176,7 @@
           row.addEventListener('click', function() {
             document.querySelectorAll('.podcast-row').forEach(r => r.style.background = '');
             this.style.background = 'rgba(233, 69, 96, 0.08)';
-            const pid = parseInt(this.dataset.id);
-            showEpisodes(pid);
+            showEpisodes(this.dataset.id);
           });
         });
       }
@@ -217,14 +184,35 @@
       function showEpisodes(podcastId) {
         const panel = document.getElementById('episodePanelBody');
         const podcast = podcasts.find(p => p.id === podcastId);
-        const episodes = EPISODE_DATA[podcastId] || [];
 
         if (!podcast) {
           panel.innerHTML = '<div class="placeholder-content"><i class="fas fa-exclamation-circle"></i><h4>Podcast not found</h4></div>';
           return;
         }
 
-        const duration = episodes.reduce((s, e) => s + e.duration_sec, 0);
+        // Show loading state
+        panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><p style="margin-top:12px;">Loading episodes...</p></div>';
+
+        // Fetch real episodes from API
+        fetch('/api/admin/podcasts/' + podcastId + '/episodes', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(function(res) {
+          if (!res.ok) throw new Error('Failed');
+          return res.json();
+        })
+        .then(function(episodes) {
+          renderEpisodes(podcast, episodes);
+        })
+        .catch(function() {
+          panel.innerHTML = '<div class="placeholder-content"><i class="fas fa-exclamation-circle"></i><h4>Failed to load episodes</h4><p>The database might be unavailable.</p></div>';
+        });
+      }
+
+      function renderEpisodes(podcast, episodes) {
+        const panel = document.getElementById('episodePanelBody');
+
+        const duration = episodes.reduce(function(s, e) { return s + (e.duration_sec || 0); }, 0);
         const durStr = duration > 3600 ? (duration / 3600).toFixed(1) + 'h' : duration > 60 ? Math.floor(duration / 60) + 'm' : duration + 's';
 
         panel.innerHTML = `
@@ -235,7 +223,7 @@
               <span>${podcast.author} &middot; ${episodes.length} episodes &middot; ${durStr} total</span>
             </div>
             <div style="margin-left:auto;">
-              <button class="btn btn-sm btn-outline view-json-btn" data-id="${podcastId}"><i class="fas fa-code"></i> Raw JSON</button>
+              <button class="btn btn-sm btn-outline view-json-btn" data-id="${podcast.id}"><i class="fas fa-code"></i> Raw JSON</button>
             </div>
           </div>
           <table style="width:100%;">
@@ -249,18 +237,18 @@
               </tr>
             </thead>
             <tbody>
-              ${episodes.map(ep => {
+              ${episodes.map(function(ep) {
                 const dur = ep.duration_sec > 3600 ? new Date(ep.duration_sec * 1000).toISOString().substr(11, 8) : Math.floor(ep.duration_sec / 60) + ':' + String(ep.duration_sec % 60).padStart(2, '0');
                 const sc = ep.status === 'ingested' ? 'badge-success' : ep.status === 'failed' ? 'badge-error' : 'badge-pending';
-                return `<tr>
-                  <td style="font-size:13px;">${ep.title}</td>
-                  <td style="font-size:13px;color:var(--text-secondary);">${dur}</td>
-                  <td style="font-size:12px;color:var(--text-muted);">${ep.published_at}</td>
-                  <td><span class="badge ${sc}">${ep.status}</span></td>
-                  <td class="cell-actions">
-                    <button class="btn btn-xs btn-outline view-json-ep-btn" data-podcast="${podcastId}" data-episode='${JSON.stringify(ep).replace(/'/g, "&#39;")}'><i class="fas fa-code"></i></button>
-                  </td>
-                </tr>`;
+                return '<tr>'
+                  + '<td style="font-size:13px;">' + (ep.title || 'Untitled') + '</td>'
+                  + '<td style="font-size:13px;color:var(--text-secondary);">' + dur + '</td>'
+                  + '<td style="font-size:12px;color:var(--text-muted);">' + (ep.published_at || '—') + '</td>'
+                  + '<td><span class="badge ' + sc + '">' + (ep.status || 'unknown') + '</span></td>'
+                  + '<td class="cell-actions">'
+                  + '<button class="btn btn-xs btn-outline view-json-ep-btn" data-podcast="' + podcast.id + '" data-episode=\'' + JSON.stringify(ep).replace(/'/g, "&#39;") + '\'><i class="fas fa-code"></i></button>'
+                  + '</td>'
+                  + '</tr>';
               }).join('')}
             </tbody>
           </table>
@@ -268,20 +256,29 @@
 
         // Bind JSON view buttons
         panel.querySelector('.view-json-btn')?.addEventListener('click', function() {
-          const pid = parseInt(this.dataset.id);
-          const p = podcasts.find(x => x.id === pid);
-          const eps = EPISODE_DATA[pid] || [];
-          const jsonData = { podcast: p, episodes: eps, fetched_at: new Date().toISOString() };
-          document.getElementById('jsonContent').textContent = JSON.stringify(jsonData, null, 2);
-          document.getElementById('jsonModal').classList.add('show');
-        });
-
-        panel.querySelectorAll('.view-json-ep-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const ep = JSON.parse(this.dataset.episode);
-            const jsonData = { episode: ep, podcast_id: this.dataset.podcast, fetched_at: new Date().toISOString() };
+          fetch('/api/admin/podcasts/' + podcast.id + '/episodes', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          }).then(function(r) { return r.json(); }).then(function(eps) {
+            const jsonData = { podcast: podcast, episodes: eps, fetched_at: new Date().toISOString() };
             document.getElementById('jsonContent').textContent = JSON.stringify(jsonData, null, 2);
             document.getElementById('jsonModal').classList.add('show');
+          }).catch(function() {
+            document.getElementById('jsonContent').textContent = 'Failed to fetch data';
+            document.getElementById('jsonModal').classList.add('show');
+          });
+        });
+
+        panel.querySelectorAll('.view-json-ep-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            try {
+              const ep = JSON.parse(this.dataset.episode);
+              const jsonData = { episode: ep, podcast_id: this.dataset.podcast, fetched_at: new Date().toISOString() };
+              document.getElementById('jsonContent').textContent = JSON.stringify(jsonData, null, 2);
+              document.getElementById('jsonModal').classList.add('show');
+            } catch(e) {
+              document.getElementById('jsonContent').textContent = 'Error parsing episode data';
+              document.getElementById('jsonModal').classList.add('show');
+            }
           });
         });
       }
@@ -293,8 +290,7 @@
             headers: { 'Authorization': 'Bearer ' + token }
           });
           if (res.ok) podcasts = await res.json();
-          else podcasts = SAMPLE_PODCASTS;
-        } catch(e) { podcasts = SAMPLE_PODCASTS; }
+        } catch(e) { /* podcasts stays empty */ }
         renderPodcasts(podcasts);
       }
 

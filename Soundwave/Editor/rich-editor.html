@@ -24,9 +24,13 @@
         <a href="/episodes" class="nav-item"><i class="fa-solid fa-microphone"></i>Episodes</a>
         <a href="/podcasts" class="nav-item"><i class="fa-solid fa-podcast"></i>Podcasts</a>
         <a href="/content-browser" class="nav-item"><i class="fa-solid fa-globe"></i>Content Browser</a>
-        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Admin Settings</a>
+        <a href="/admin-settings" class="nav-item"><i class="fa-solid fa-gear"></i>Editor Settings</a>
       </nav>
       <div class="sidebar-bottom">
+        <div id="sidebarUser" style="display:none;padding:0.5rem 1rem;border-top:1px solid var(--border-color)">
+          <div style="font-size:0.8125rem;font-weight:600" id="sidebarEmail"></div>
+          <div style="font-size:0.7rem;color:var(--text-gray)" id="sidebarRole"></div>
+        </div>
         <button class="btn-primary w-full" onclick="window.location='/collections'"><i class="fa-solid fa-plus"></i> Create New Collection</button>
         <div class="sidebar-bottom-links">
           <a href="#" class="bottom-link" id="signOutBtn">
@@ -80,7 +84,7 @@
           <div class="editor-row-2">
             <div class="editor-section">
               <label class="editor-label">EPISODE NUMBER</label>
-              <input type="text" class="form-control" value="EP-142" style="padding:0.875rem 1rem">
+              <input type="text" id="episode_number" class="form-control" placeholder="e.g. EP-142" style="padding:0.875rem 1rem">
             </div>
             <div class="editor-section">
               <label class="editor-label">TAGS</label>
@@ -197,6 +201,24 @@
                 <div class="ep-date">Nov 7, 2023</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Highlight Clips Section -->
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="toggleHighlights()">
+          <h3 style="margin:0;font-size:1rem">Highlight Clips <span id="highlightCount" class="badge badge-warning" style="font-size:0.75rem;margin-left:0.5rem">0</span></h3>
+          <i class="fa-solid fa-chevron-down" id="highlightChevron" style="transition:transform 0.2s"></i>
+        </div>
+        <div id="highlightsSection" style="display:none;padding:1.25rem">
+          <button class="btn-primary" onclick="detectHighlights()" id="detectBtn" style="font-size:0.85rem">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Detect Highlights
+          </button>
+          <div id="highlightsList" style="margin-top:1rem"></div>
+          <div id="highlightsEmpty" style="text-align:center;padding:2rem;color:var(--text-gray)">
+            <i class="fa-solid fa-scissors" style="font-size:2rem;display:block;margin-bottom:0.5rem"></i>
+            <p>No highlights yet. Click "Auto-Detect" to generate suggestions.</p>
           </div>
         </div>
       </div>
@@ -541,6 +563,12 @@
   document.querySelectorAll('.tag-chip i').forEach(function(icon) {
     icon.addEventListener('click', function() { this.parentElement.remove(); });
   });
+  window.updatePreview = updatePreview;
+  window.coverSet = false;
+  Object.defineProperty(window, 'coverSet', {
+    get: function() { return coverSet; },
+    set: function(v) { coverSet = v; }
+  });
 })();
 </script>
 
@@ -555,5 +583,293 @@
       }
     })();
   </script>
+  <script>
+requireAuth();
+(function() {
+  const user = EDITOR_API.getUser();
+  if (user) {
+    document.getElementById('sidebarEmail').textContent = user.email;
+    document.getElementById('sidebarRole').textContent = user.role || 'Editor';
+    document.getElementById('sidebarUser').style.display = 'block';
+  }
+})();
+</script>
+<script>
+(function() {
+  // ── Load episode if editing ──
+  const episodeId = sessionStorage.getItem('editingEpisodeId');
+  if (episodeId) {
+    // Update header to show editing
+    const breadcrumb = document.querySelector('.breadcrumb-link:last-child');
+    if (breadcrumb) breadcrumb.textContent = 'EDIT EPISODE';
+
+    // Fetch episode data
+    EDITOR_API.get('/api/episodes/' + episodeId)
+      .then(function(ep) {
+        document.getElementById('episodeTitle').value = ep.title || '';
+
+        if (ep.description) {
+          document.getElementById('richEditor').innerHTML = ep.description;
+          updatePreview();
+        }
+
+        if (ep.episode_number) {
+          document.querySelector('#episode_number').value = ep.episode_number;
+        }
+
+        var coverUrl = ep.image_url || ep.podcasts?.image_url;
+        if (coverUrl) {
+          document.getElementById('coverPreview').src = coverUrl;
+          document.getElementById('previewImg').src = coverUrl;
+          window.coverSet = true;
+        }
+
+        if (ep.audio_url) {
+          var urlEl = document.getElementById('currentAudioUrl');
+          if (urlEl) urlEl.textContent = ep.audio_url;
+        }
+
+        updatePreview();
+
+        // Load tags for this episode
+        EDITOR_API.get('/api/episodes/' + episodeId + '/tags')
+          .then(function(data) {
+            if (data && data.tags && data.tags.length) {
+              populateTags(data.tags);
+            }
+          })
+          .catch(function(err) {
+            console.error('[Load Tags]', err);
+          });
+
+        // Load highlights for this episode
+        loadHighlights(episodeId);
+      })
+      .catch(function(err) {
+        console.error('[Load Episode]', err);
+      });
+
+    // Clear the session storage so a fresh load doesn't re-edit
+    sessionStorage.removeItem('editingEpisodeId');
+  }
+
+  // ── Save Draft button ──
+  document.querySelectorAll('.topbar-actions .btn-secondary')[0]
+    ?.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (!episodeId) return alert('Select an episode from the Episodes page first');
+      saveEpisode(episodeId, 'draft');
+    });
+
+  // ── Publish Episode button ──
+  document.querySelectorAll('.topbar-actions .btn-primary')[0]
+    ?.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (!episodeId) return alert('Select an episode from the Episodes page first');
+      if (!confirm('Publish this episode? It will be visible to all users.')) return;
+      saveEpisode(episodeId, 'published');
+    });
+
+  function saveEpisode(id, status) {
+    var title = document.getElementById('episodeTitle').value.trim();
+    if (!title) {
+      alert('Episode title is required');
+      return;
+    }
+
+    var updates = {
+      title: title,
+      description: document.getElementById('richEditor').innerHTML || '',
+      episode_number: document.querySelector('#episode_number')?.value || null,
+      status: status,
+    };
+
+    // If cover was changed (data URL), upload it first
+    var coverPromise = Promise.resolve();
+    var coverImg = document.getElementById('coverPreview');
+    if (coverSet && coverImg.src.startsWith('data:')) {
+      coverPromise = EDITOR_API.post('/api/upload/image', { image: coverImg.src })
+        .then(function(res) {
+          if (res && res.url) {
+            updates.image_url = res.url;
+            // Update preview to the permanent URL immediately
+            coverImg.src = res.url;
+            document.getElementById('previewImg').src = res.url;
+          }
+        });
+    }
+
+    coverPromise
+      .then(function() {
+        return EDITOR_API.put('/api/episodes/' + id, updates);
+      })
+      .then(function() {
+        var tags = collectTags();
+        return EDITOR_API.post('/api/episodes/' + id + '/tags', { tags: tags });
+      })
+      .then(function() {
+        alert(status === 'published' ? 'Episode published!' : 'Draft saved!');
+      })
+      .catch(function(err) {
+        console.error('[Save Episode]', err);
+        alert('Failed to save: ' + (err.message || 'Unknown error'));
+      });
+  }
+
+  function collectTags() {
+    var tags = [];
+    document.querySelectorAll('.tag-chip').forEach(function(chip) {
+      var text = chip.textContent.replace('\u00D7', '').trim();
+      if (text) tags.push(text);
+    });
+    return tags;
+  }
+
+  function populateTags(tagArray) {
+    var container = document.querySelector('.tags-input');
+    if (!container) return;
+    // Remove existing chips but keep the input field
+    container.querySelectorAll('.tag-chip').forEach(function(c) { c.remove(); });
+    // Add a chip for each tag
+    var colors = ['tag-blue', 'tag-teal', 'tag-orange', 'tag-purple'];
+    tagArray.forEach(function(tag, i) {
+      var chip = document.createElement('span');
+      chip.className = 'tag-chip ' + colors[i % colors.length];
+      var safe = tag.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      chip.innerHTML = safe + ' <i class="fa-solid fa-xmark"></i>';
+      chip.querySelector('i').addEventListener('click', function() { chip.remove(); });
+      container.insertBefore(chip, document.getElementById('tagField'));
+    });
+  }
+})();
+
+// ===== Highlight Functions =====
+function formatDuration(secs) {
+  if (!secs || secs < 0) return '0:00';
+  var m = Math.floor(secs / 60);
+  var s = secs % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function toggleHighlights() {
+  var section = document.getElementById('highlightsSection');
+  var chevron = document.getElementById('highlightChevron');
+  var isOpen = section.style.display !== 'none';
+  section.style.display = isOpen ? 'none' : 'block';
+  chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function loadHighlights(episodeId) {
+  if (!episodeId) return;
+  EDITOR_API.get('/api/episodes/' + episodeId + '/highlights')
+    .then(function(data) {
+      renderHighlightCards(data.highlights || []);
+    })
+    .catch(function(err) {
+      console.error('[Load Highlights]', err);
+    });
+}
+
+function detectHighlights() {
+  var episodeId = sessionStorage.getItem('editingEpisodeId');
+  if (!episodeId) { showToast('Load an episode first', 'error'); return; }
+  var btn = document.getElementById('detectBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting...';
+  EDITOR_API.post('/api/episodes/' + episodeId + '/highlights/detect', {})
+    .then(function(data) {
+      showToast(data.message || 'Highlights generated!', 'success');
+      renderHighlightCards(data.highlights || []);
+    })
+    .catch(function(err) {
+      showToast(err.message || 'Detection failed', 'error');
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Detect Highlights';
+    });
+}
+
+function renderHighlightCards(highlights) {
+  var list = document.getElementById('highlightsList');
+  var empty = document.getElementById('highlightsEmpty');
+  var count = document.getElementById('highlightCount');
+  count.textContent = highlights.length;
+  if (!highlights.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = highlights.map(function(h) {
+    var statusClass = h.status === 'approved' ? 'badge-success' : h.status === 'rejected' ? '' : 'badge-warning';
+    return '<div class="highlight-card" data-id="' + h.id + '" style="border:1px solid var(--border-color);border-radius:0.5rem;padding:1rem;margin-bottom:0.75rem;background:var(--bg-secondary)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:start">' +
+        '<input class="form-control hl-title" value="' + escHtml(h.title) + '" style="font-weight:600;font-size:0.95rem;border:none;padding:0;width:60%;background:transparent;color:inherit">' +
+        '<span class="badge ' + statusClass + '" style="font-size:0.75rem">' + h.status + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:1rem;margin-top:0.75rem;align-items:center;flex-wrap:wrap">' +
+        '<label style="font-size:0.8rem;display:flex;align-items:center;gap:0.25rem">Start: <input type="number" class="form-control hl-start" value="' + h.start_time + '" style="width:80px;display:inline-block;font-size:0.85rem" min="0"></label>' +
+        '<label style="font-size:0.8rem;display:flex;align-items:center;gap:0.25rem">End: <input type="number" class="form-control hl-end" value="' + h.end_time + '" style="width:80px;display:inline-block;font-size:0.85rem" min="0"></label>' +
+        '<span style="font-size:0.8rem;color:var(--text-gray)">(' + formatDuration(h.end_time - h.start_time) + ')</span>' +
+      '</div>' +
+      '<textarea class="form-control hl-desc" placeholder="Description (optional)" style="margin-top:0.5rem;font-size:0.85rem;resize:vertical;min-height:50px">' + escHtml(h.description || '') + '</textarea>' +
+      '<div style="margin-top:0.5rem">' +
+        '<input class="form-control hl-tags" value="' + (h.tags || []).join(', ') + '" placeholder="Tags (comma separated)" style="font-size:0.85rem">' +
+      '</div>' +
+      '<div style="display:flex;gap:0.5rem;margin-top:0.75rem">' +
+        '<button class="btn-secondary" style="font-size:0.8rem;padding:0.35rem 0.75rem" onclick="saveHighlight(\'' + h.id + '\')"><i class="fa-regular fa-floppy-disk"></i> Save</button>' +
+        (h.status === 'pending' ? '<button class="btn-primary" style="font-size:0.8rem;padding:0.35rem 0.75rem" onclick="approveHighlight(\'' + h.id + '\')"><i class="fa-solid fa-check"></i> Approve</button>' : '') +
+        '<button class="btn-danger" style="font-size:0.8rem;padding:0.35rem 0.75rem" onclick="deleteHighlight(\'' + h.id + '\')"><i class="fa-solid fa-xmark"></i> ' + (h.status === 'pending' ? 'Reject' : 'Delete') + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveHighlight(id) {
+  var card = document.querySelector('.highlight-card[data-id="' + id + '"]');
+  if (!card) return;
+  var data = {
+    title: card.querySelector('.hl-title').value,
+    start_time: parseInt(card.querySelector('.hl-start').value) || 0,
+    end_time: parseInt(card.querySelector('.hl-end').value) || 0,
+    description: card.querySelector('.hl-desc').value,
+    tags: card.querySelector('.hl-tags').value.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; })
+  };
+  EDITOR_API.put('/api/highlights/' + id, data)
+    .then(function() { showToast('Highlight saved!', 'success'); })
+    .catch(function(err) { showToast('Error saving highlight', 'error'); console.error(err); });
+}
+
+function approveHighlight(id) {
+  EDITOR_API.post('/api/highlights/' + id + '/approve', {})
+    .then(function() {
+      showToast('Highlight approved!', 'success');
+      // Reload highlights
+      var episodeId = sessionStorage.getItem('editingEpisodeId');
+      if (episodeId) loadHighlights(episodeId);
+    })
+    .catch(function(err) { showToast('Error approving highlight', 'error'); console.error(err); });
+}
+
+function deleteHighlight(id) {
+  if (!confirm('Delete this highlight?')) return;
+  EDITOR_API.del('/api/highlights/' + id)
+    .then(function() {
+      showToast('Highlight deleted', 'success');
+      var card = document.querySelector('.highlight-card[data-id="' + id + '"]');
+      if (card) card.remove();
+      var remaining = document.querySelectorAll('.highlight-card').length;
+      document.getElementById('highlightCount').textContent = remaining;
+      if (remaining === 0) document.getElementById('highlightsEmpty').style.display = 'block';
+    })
+    .catch(function(err) { showToast('Error deleting highlight', 'error'); console.error(err); });
+}
+</script>
 </body>
 </html>
